@@ -1,0 +1,34 @@
+require('dotenv').config();
+
+const requiredEnvVars = [
+  'PORT',
+  'MONGODB_URI',
+  'JWT_SECRET',
+  'JWT_EXPIRES_IN',
+  'CLIENT_URL',
+];
+
+const validateEnv = () => {
+  const missingVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
+  if (missingVars.length > 0) {
+    console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
+    process.exit(1);
+  }
+};
+
+validateEnv();
+
+module.exports = {
+  env: {
+    PORT: process.env.PORT || 5000,
+    MONGODB_URI: process.env.MONGODB_URI,
+    JWT_SECRET: process.env.JWT_SECRET,
+    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN,
+    CLIENT_URL: process.env.CLIENT_URL,
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+    OTP_EXPIRY_SECONDS: parseInt(process.env.OTP_EXPIRY_SECONDS) || 60,
+    MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB) || 10,
+  }
+};
