@@ -9,6 +9,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import TeacherDashboard from './pages/dashboard/TeacherDashboard';
 import StudentDashboard from './pages/dashboard/StudentDashboard';
 import ClassDetails from './pages/class/ClassDetails';
+import AssignmentDetails from './pages/class/AssignmentDetails';
 
 const ProtectedRoute = ({ children, roles }) => {
   const { user, loading } = useAuth();
@@ -40,6 +41,7 @@ const App = () => {
             <Route path="admin/users" element={<ProtectedRoute roles={['admin']}><AdminUsers /></ProtectedRoute>} />
             <Route path="profile" element={<Profile />} />
             <Route path="classes/:id" element={<ClassDetails />} />
+            <Route path="classes/:id/assignments/:assignmentId" element={<AssignmentDetails />} />
             <Route path="classes" element={<div>Classes Page</div>} />
           </Route>
         </Routes>
