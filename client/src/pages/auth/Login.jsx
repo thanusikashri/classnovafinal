@@ -26,22 +26,22 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-base flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans transition-colors duration-300">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center items-center text-primary-600 mb-4">
-          <BookOpen size={40} className="text-primary-600" />
-          <span className="ml-3 text-3xl font-medium text-gray-800 tracking-tight">ClassNova</span>
+        <div className="flex justify-center items-center text-primary-500 mb-4">
+          <BookOpen size={40} className="text-primary-500" />
+          <span className="ml-3 text-3xl font-medium text-content tracking-tight">ClassNova</span>
         </div>
-        <h2 className="mt-2 text-center text-2xl text-gray-800 font-medium">
+        <h2 className="mt-2 text-center text-2xl text-content font-medium">
           Sign in
         </h2>
-        <p className="mt-2 text-center text-base text-gray-600">
+        <p className="mt-2 text-center text-base text-muted">
           to continue to ClassNova
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-[450px]">
-        <div className="bg-white py-10 px-6 border border-gray-300 rounded-lg sm:px-10">
+        <div className="card-surface py-10 px-6 sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
               <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm border border-red-200 flex items-center gap-2">
@@ -60,7 +60,7 @@ const Login = () => {
                   placeholder="Email or phone"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent sm:text-base"
+                  className="input-field"
                 />
               </div>
             </div>
@@ -73,12 +73,12 @@ const Login = () => {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent sm:text-base pr-10"
+                  className="input-field pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted hover:text-content focus:outline-none"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -94,7 +94,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="py-2.5 px-6 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 transition-colors"
+                className="btn-primary"
               >
                 {loading ? 'Signing in...' : 'Next'}
               </button>

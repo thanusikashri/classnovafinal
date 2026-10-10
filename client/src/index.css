@@ -1,7 +1,104 @@
 @import "tailwindcss";
 
+@theme {
+  /* Pastel Accent Colors */
+  --color-primary-50: #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-300: #c4b5fd;
+  --color-primary-400: #a78bfa;
+  --color-primary-500: #8b5cf6; /* Muted lavender */
+  --color-primary-600: #7c3aed;
+  --color-primary-700: #6d28d9;
+  --color-primary-800: #5b21b6;
+  --color-primary-900: #4c1d95;
+  
+  --color-secondary-50: #f0fdfa;
+  --color-secondary-100: #ccfbf1;
+  --color-secondary-200: #99f6e4;
+  --color-secondary-300: #5eead4;
+  --color-secondary-400: #2dd4bf;
+  --color-secondary-500: #14b8a6; /* Mint */
+  --color-secondary-600: #0d9488;
+  
+  /* Additional Pastels */
+  --color-pastel-blue: #bfdbfe;
+  --color-pastel-pink: #fbcfe8;
+  --color-pastel-yellow: #fef08a;
+  --color-pastel-peach: #ffedd5;
+
+  /* Semantic Variables mapped to CSS vars below */
+  --color-base: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-border: var(--border-color);
+  --color-content: var(--text-base);
+  --color-muted: var(--text-muted);
+}
+
 @layer base {
+  :root {
+    --bg-base: #f8fafc; /* slate-50 */
+    --bg-surface: #ffffff;
+    --text-base: #1e293b; /* slate-800 */
+    --text-muted: #64748b; /* slate-500 */
+    --border-color: #e2e8f0; /* slate-200 */
+  }
+
+  .dark {
+    --bg-base: #0f172a; /* slate-900 */
+    --bg-surface: #1e293b; /* slate-800 */
+    --text-base: #f1f5f9; /* slate-100 */
+    --text-muted: #94a3b8; /* slate-400 */
+    --border-color: #334155; /* slate-700 */
+  }
+
   body {
-    @apply bg-gray-50 text-gray-900;
+    background-color: var(--bg-base);
+    color: var(--text-base);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+@layer components {
+  .card-surface {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    transition: all 0.3s ease;
+  }
+  
+  .dark .card-surface {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-primary {
+    @apply inline-flex justify-center items-center px-6 py-2.5 rounded-full font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .dark .btn-primary {
+    @apply focus:ring-offset-slate-900;
+  }
+
+  .btn-secondary {
+    @apply inline-flex justify-center items-center px-6 py-2.5 rounded-full font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all;
+    background-color: var(--bg-base);
+    color: var(--text-base);
+    border: 1px solid var(--border-color);
+  }
+
+  .dark .btn-secondary {
+    @apply hover:bg-slate-700 focus:ring-offset-slate-900;
+  }
+
+  .input-field {
+    @apply block w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all;
+    background-color: var(--bg-base);
+    color: var(--text-base);
+    border: 1px solid var(--border-color);
+  }
+  
+  .dark .input-field {
+    @apply focus:border-transparent;
   }
 }

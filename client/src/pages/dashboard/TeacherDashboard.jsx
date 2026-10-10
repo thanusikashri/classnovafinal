@@ -61,7 +61,7 @@ const TeacherDashboard = () => {
       <div className="flex justify-end mb-6">
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md font-medium hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="btn-secondary"
         >
           <Plus size={20} />
           <span>Create class</span>
@@ -73,7 +73,7 @@ const TeacherDashboard = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {classes.map((cls, idx) => (
-            <div key={cls._id} className="bg-white rounded-lg border border-gray-300 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-72 relative group">
+            <div key={cls._id} className="card-surface overflow-hidden hover:shadow-lg flex flex-col h-72 relative group">
               <Link to={`/classes/${cls._id}`} className={`h-24 p-4 text-white relative block ${getBannerGradient(idx)}`}>
                 <div className="flex justify-between items-start">
                   <div>
@@ -97,15 +97,15 @@ const TeacherDashboard = () => {
             </div>
           ))}
           {classes.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-20 text-gray-500">
-              <div className="bg-gray-100 p-6 rounded-full mb-4">
-                <Users size={48} className="text-gray-400" />
+            <div className="col-span-full flex flex-col items-center justify-center py-20 text-muted">
+              <div className="bg-surface border border-border p-6 rounded-full mb-4">
+                <Users size={48} className="text-muted" />
               </div>
-              <h3 className="text-lg font-medium text-gray-800 mb-1">Add a class to get started</h3>
+              <h3 className="text-lg font-medium text-content mb-1">Add a class to get started</h3>
               <p className="text-sm">Create a class to communicate with your students.</p>
               <button
                 onClick={() => setShowModal(true)}
-                className="mt-6 bg-primary-600 text-white px-6 py-2 rounded-md font-medium hover:bg-primary-700 transition-colors"
+                className="mt-6 btn-primary"
               >
                 Create class
               </button>
@@ -116,9 +116,9 @@ const TeacherDashboard = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="card-surface w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="px-6 py-4">
-              <h3 className="text-lg font-medium text-gray-800">Create class</h3>
+              <h3 className="text-lg font-medium text-content">Create class</h3>
             </div>
             <form onSubmit={handleCreateClass}>
               <div className="px-6 py-4 space-y-4">
@@ -129,10 +129,10 @@ const TeacherDashboard = () => {
                     id="className"
                     value={newClassName} 
                     onChange={e => setNewClassName(e.target.value)} 
-                    className="block w-full px-4 pt-6 pb-2 text-base text-gray-900 bg-gray-50 border border-gray-300 rounded-t-md appearance-none focus:outline-none focus:ring-0 focus:border-primary-600 peer" 
+                    className="block w-full px-4 pt-6 pb-2 text-base text-content bg-base border border-border rounded-t-md appearance-none focus:outline-none focus:ring-0 focus:border-primary-600 peer" 
                     placeholder=" "
                   />
-                  <label htmlFor="className" className="absolute text-sm text-gray-500 duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] left-4 peer-focus:text-primary-600 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3">Class name (required)</label>
+                  <label htmlFor="className" className="absolute text-sm text-muted duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] left-4 peer-focus:text-primary-600 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3">Class name (required)</label>
                   <div className="absolute bottom-0 left-0 h-0.5 w-full bg-primary-600 scale-x-0 peer-focus:scale-x-100 transition-transform duration-300"></div>
                 </div>
                 
@@ -142,16 +142,16 @@ const TeacherDashboard = () => {
                     id="classDesc"
                     value={newClassDesc} 
                     onChange={e => setNewClassDesc(e.target.value)} 
-                    className="block w-full px-4 pt-6 pb-2 text-base text-gray-900 bg-gray-50 border border-gray-300 rounded-t-md appearance-none focus:outline-none focus:ring-0 focus:border-primary-600 peer" 
+                    className="block w-full px-4 pt-6 pb-2 text-base text-content bg-base border border-border rounded-t-md appearance-none focus:outline-none focus:ring-0 focus:border-primary-600 peer" 
                     placeholder=" "
                   />
-                  <label htmlFor="classDesc" className="absolute text-sm text-gray-500 duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] left-4 peer-focus:text-primary-600 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3">Section / Description</label>
+                  <label htmlFor="classDesc" className="absolute text-sm text-muted duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] left-4 peer-focus:text-primary-600 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3">Section / Description</label>
                   <div className="absolute bottom-0 left-0 h-0.5 w-full bg-primary-600 scale-x-0 peer-focus:scale-x-100 transition-transform duration-300"></div>
                 </div>
               </div>
-              <div className="px-6 py-4 flex justify-end gap-2 bg-gray-50 border-t border-gray-200">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
-                <button type="submit" disabled={!newClassName.trim() || isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 transition-colors">
+              <div className="px-6 py-4 flex justify-end gap-2 bg-base border-t border-border">
+                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" disabled={!newClassName.trim() || isSubmitting} className="btn-primary">
                   {isSubmitting ? 'Creating...' : 'Create'}
                 </button>
               </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { MoreVertical, ClipboardList, Plus, FileText } from 'lucide-react';
+import { MoreVertical, ClipboardList, Plus, FileText, CheckSquare } from 'lucide-react';
 import api from '../../services/api';
 
 const ClassDetails = () => {
@@ -10,6 +10,7 @@ const ClassDetails = () => {
   const [classData, setClassData] = useState(null);
   const [announcements, setAnnouncements] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
   const [activeTab, setActiveTab] = useState('stream');
   
   const [newAnnouncement, setNewAnnouncement] = useState('');
@@ -44,6 +45,15 @@ const ClassDetails = () => {
       setAssignments(res.data.data);
     } catch (err) {
       console.error(err);
+    }
+  }, [id]);
+
+  const fetchQuizzes = useCallback(async () => {
+    try {
+      const res = await api.get(`/classes/${id}/quizzes`);
+      setQuizzes(res.data.data);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -53,7 +63,8 @@ const ClassDetails = () => {
     fetchClassData();
     fetchAnnouncements();
     fetchAssignments();
-  }, [fetchClassData, fetchAnnouncements, fetchAssignments]);
+    fetchQuizzes();
+  }, [fetchClassData, fetchAnnouncements, fetchAssignments, fetchQuizzes]);
 
   const handlePostAnnouncement = async (e) => {
     e.preventDefault();
@@ -102,15 +113,15 @@ const ClassDetails = () => {
     <div className="max-w-5xl mx-auto pb-12 font-sans">
       
       {/* Tabs */}
-      <div className="flex border-b border-gray-300 mb-6">
+      <div className="flex border-b border-border mb-6">
         {['stream', 'classwork', 'people'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-6 py-3 font-medium capitalize transition-colors relative ${
               activeTab === tab 
-                ? 'text-primary-700' 
-                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-t-lg'
+                ? 'text-primary-600 dark:text-primary-400' 
+                : 'text-muted hover:text-content hover:bg-surface rounded-t-lg'
             }`}
           >
             {tab}
@@ -134,32 +145,36 @@ const ClassDetails = () => {
           <div className="flex flex-col md:flex-row gap-6">
             <div className="hidden md:block w-64 space-y-4 shrink-0">
               {isTeacher && (
-                <div className="bg-white border border-gray-300 rounded-lg p-4 shadow-sm">
-                  <h3 className="text-sm font-medium text-gray-700 mb-1">Class code</h3>
-                  <div className="text-2xl text-primary-600 font-mono tracking-wider">{classData.classCode}</div>
+                <div className="card-surface p-4">
+                  <h3 className="text-sm font-medium text-muted mb-1">Class code</h3>
+                  <div className="text-2xl text-primary-600 dark:text-primary-400 font-mono tracking-wider">{classData.classCode}</div>
                 </div>
               )}
-              <div className="bg-white border border-gray-300 rounded-lg p-4 shadow-sm">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Upcoming</h3>
-                {assignments.filter(a => a.dueDate && new Date(a.dueDate) > new Date()).length > 0 ? (
+              <div className="card-surface p-4">
+                <h3 className="text-sm font-medium text-muted mb-3">Upcoming</h3>
+                {assignments.filter(a => a.dueDate && new Date(a.dueDate) > new Date()).length > 0 || quizzes.filter(q => q.endTime && new Date(q.endTime) > new Date()).length > 0 ? (
                   <ul className="text-sm space-y-2 mb-4">
-                    {assignments.filter(a => a.dueDate && new Date(a.dueDate) > new Date()).slice(0,3).map(a => (
+                    {assignments.filter(a => a.dueDate && new Date(a.dueDate) > new Date()).slice(0,2).map(a => (
                       <li key={a._id} className="text-gray-800 truncate">
-                        <Link to={`/classes/${id}/assignments/${a._id}`} className="hover:underline">{a.title}</Link>
-                        <div className="text-xs text-gray-500">{new Date(a.dueDate).toLocaleDateString()}</div>
+                        <Link to={`/classes/${id}/assignments/${a._id}`} className="hover:underline flex items-center gap-1"><FileText size={14}/>{a.title}</Link>
+                      </li>
+                    ))}
+                    {quizzes.filter(q => q.endTime && new Date(q.endTime) > new Date()).slice(0,2).map(q => (
+                      <li key={q._id} className="text-gray-800 truncate">
+                        <Link to={`/classes/${id}/quizzes/${q._id}`} className="hover:underline flex items-center gap-1"><CheckSquare size={14}/>{q.title}</Link>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-gray-500 mb-4">No work due soon</p>
+                  <p className="text-sm text-muted mb-4">No work due soon</p>
                 )}
-                <button onClick={() => setActiveTab('classwork')} className="text-sm text-primary-600 font-medium hover:underline focus:outline-none">View all</button>
+                <button onClick={() => setActiveTab('classwork')} className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline focus:outline-none">View all</button>
               </div>
             </div>
 
             <div className="flex-1 space-y-4">
               {isTeacher && (
-                <div className="bg-white border border-gray-300 rounded-lg shadow-sm overflow-hidden">
+                <div className="card-surface overflow-hidden">
                   <div className="p-4 flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-medium shrink-0 shadow-sm">
                       {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
@@ -169,7 +184,7 @@ const ClassDetails = () => {
                         value={newAnnouncement}
                         onChange={(e) => setNewAnnouncement(e.target.value)}
                         placeholder="Announce something to your class"
-                        className="w-full bg-gray-50 hover:bg-gray-100 focus:bg-white px-4 py-3 border-b-2 border-transparent focus:border-primary-600 outline-none resize-none transition-colors duration-200 min-h-[50px]"
+                        className="w-full bg-base hover:bg-surface focus:bg-surface px-4 py-3 border-b-2 border-transparent focus:border-primary-600 outline-none resize-none transition-colors duration-200 min-h-[50px] text-content"
                         rows={newAnnouncement.length > 50 ? 3 : 1}
                         required
                       ></textarea>
@@ -178,14 +193,14 @@ const ClassDetails = () => {
                           <button 
                             type="button" 
                             onClick={() => setNewAnnouncement('')} 
-                            className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                            className="btn-secondary"
                           >
                             Cancel
                           </button>
                           <button 
                             type="submit" 
                             disabled={isSubmitting}
-                            className="px-6 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 transition-colors shadow-sm disabled:opacity-50"
+                            className="btn-primary"
                           >
                             {isSubmitting ? 'Posting...' : 'Post'}
                           </button>
@@ -198,20 +213,20 @@ const ClassDetails = () => {
 
               <div className="space-y-4">
                 {announcements.map((ann) => (
-                  <div key={ann._id} className="bg-white border border-gray-300 rounded-lg shadow-sm">
+                  <div key={ann._id} className="card-surface">
                     <div className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-medium shadow-sm">
+                        <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-medium shadow-sm">
                           {ann.author?.name ? ann.author.name.charAt(0).toUpperCase() : 'U'}
                         </div>
                         <div>
-                          <h4 className="font-medium text-gray-800">{ann.author?.name || 'Unknown User'}</h4>
-                          <p className="text-xs text-gray-500">
+                          <h4 className="font-medium text-content">{ann.author?.name || 'Unknown User'}</h4>
+                          <p className="text-xs text-muted">
                             {new Date(ann.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                           </p>
                         </div>
                       </div>
-                      <button className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors">
+                      <button className="p-2 rounded-full hover:bg-base text-muted transition-colors">
                         <MoreVertical size={20} />
                       </button>
                     </div>
@@ -241,18 +256,54 @@ const ClassDetails = () => {
       {activeTab === 'classwork' && (
         <div className="max-w-4xl mx-auto pt-4">
           {isTeacher && (
-            <div className="flex justify-start mb-6 border-b border-gray-200 pb-6">
+            <div className="flex justify-start mb-6 border-b border-gray-200 pb-6 gap-4">
               <button
                 onClick={() => setShowAssignModal(true)}
                 className="flex items-center gap-2 bg-primary-600 text-white px-5 py-2.5 rounded-full font-medium hover:bg-primary-700 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 <Plus size={20} />
-                <span>Create</span>
+                <span>Assignment</span>
               </button>
+              <Link
+                to={`/classes/${id}/quizzes/create`}
+                className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-full font-medium hover:bg-indigo-700 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <Plus size={20} />
+                <span>Quiz</span>
+              </Link>
             </div>
           )}
 
           <div className="space-y-4">
+            {quizzes.map(q => (
+              <Link 
+                key={q._id} 
+                to={`/classes/${id}/quizzes/${q._id}`}
+                className="group flex items-center gap-4 bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors shrink-0">
+                  <CheckSquare size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-medium text-gray-800 truncate">{q.title}</h3>
+                    {!q.isPublished && isTeacher && <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Draft</span>}
+                  </div>
+                  <div className="text-sm text-gray-500 flex items-center gap-3">
+                    <span>{q.durationMinutes} mins</span>
+                    {q.endTime && (
+                      <>
+                        <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                        <span className={new Date(q.endTime) < new Date() ? 'text-red-500' : ''}>
+                          Due {new Date(q.endTime).toLocaleDateString()}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+
             {assignments.map(a => (
               <Link 
                 key={a._id} 
@@ -279,14 +330,14 @@ const ClassDetails = () => {
               </Link>
             ))}
 
-            {assignments.length === 0 && (
+            {(assignments.length === 0 && quizzes.length === 0) && (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="bg-gray-50 border border-gray-200 p-6 rounded-full mb-4">
                   <ClipboardList size={48} className="text-gray-400" />
                 </div>
                 <h2 className="text-xl font-medium text-gray-800 mb-2">No classwork yet</h2>
                 <p className="text-gray-500 max-w-md text-sm">
-                  {isTeacher ? 'Create assignments for your students here.' : 'Your teacher hasn\'t assigned any work yet.'}
+                  {isTeacher ? 'Create assignments or quizzes for your students here.' : 'Your teacher hasn\'t assigned any work yet.'}
                 </p>
               </div>
             )}
