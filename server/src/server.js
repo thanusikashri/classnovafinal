@@ -8,6 +8,8 @@ const { errorHandler } = require('./middlewares/error.middleware');
 
 // Route files
 const authRoutes = require('./routes/auth.routes');
+const userRoutes = require('./routes/user.routes');
+const classRoutes = require('./routes/class.routes');
 
 // Connect to database
 connectDB();
@@ -24,6 +26,8 @@ app.use(cors({ origin: env.CLIENT_URL }));
 
 // Mount routers
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/classes', classRoutes);
 
 // Error handler middleware
 app.use(errorHandler);

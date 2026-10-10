@@ -87,6 +87,32 @@ exports.logout = async (req, res, next) => {
   });
 };
 
+// @desc    Update user profile
+// @route   PUT /api/auth/me
+// @access  Private
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { name, email } = req.body;
+    
+    // Build update object (restrict role and isActive)
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    
+    const user = await User.findByIdAndUpdate(req.user.id, updateData, {
+      new: true,
+      runValidators: true
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const sendTokenResponse = (user, statusCode, res) => {
   const token = user.getSignedJwtToken();
   res.status(statusCode).json({

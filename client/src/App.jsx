@@ -4,6 +4,11 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import MainLayout from './components/layout/MainLayout';
+import Profile from './pages/profile/Profile';
+import AdminUsers from './pages/admin/AdminUsers';
+import TeacherDashboard from './pages/dashboard/TeacherDashboard';
+import StudentDashboard from './pages/dashboard/StudentDashboard';
+import ClassDetails from './pages/class/ClassDetails';
 
 const ProtectedRoute = ({ children, roles }) => {
   const { user, loading } = useAuth();
@@ -29,11 +34,13 @@ const App = () => {
           
           <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
             <Route index element={<DashboardRedirect />} />
-            <Route path="student-dashboard" element={<div>Student Dashboard</div>} />
-            <Route path="teacher-dashboard" element={<div>Teacher Dashboard</div>} />
-            <Route path="admin-dashboard" element={<div>Admin Dashboard</div>} />
-            <Route path="profile" element={<div>Profile</div>} />
-            <Route path="classes" element={<div>Classes</div>} />
+            <Route path="student-dashboard" element={<ProtectedRoute roles={['student']}><StudentDashboard /></ProtectedRoute>} />
+            <Route path="teacher-dashboard" element={<ProtectedRoute roles={['teacher']}><TeacherDashboard /></ProtectedRoute>} />
+            <Route path="admin-dashboard" element={<ProtectedRoute roles={['admin']}><div>Admin Dashboard</div></ProtectedRoute>} />
+            <Route path="admin/users" element={<ProtectedRoute roles={['admin']}><AdminUsers /></ProtectedRoute>} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="classes/:id" element={<ClassDetails />} />
+            <Route path="classes" element={<div>Classes Page</div>} />
           </Route>
         </Routes>
       </Router>
