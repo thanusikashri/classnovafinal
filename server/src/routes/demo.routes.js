@@ -203,12 +203,59 @@ router.get('/admin/stats', authenticateDemo, authorizeDemo('admin'), (req, res) 
   });
 });
 
-// Admin Users List
+// Admin Users List & Management
 router.get('/users', authenticateDemo, authorizeDemo('admin'), (req, res) => {
+  let list = demoStore.getUsers();
+  if (req.query.role) {
+    list = list.filter(u => u.role === req.query.role);
+  }
+  if (req.query.search) {
+    const s = req.query.search.toLowerCase();
+    list = list.filter(u => u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s));
+  }
   res.status(200).json({
     success: true,
-    count: demoStore.getUsers().length,
-    data: demoStore.getUsers()
+    count: list.length,
+    data: list
+  });
+});
+
+router.post('/users', authenticateDemo, authorizeDemo('admin'), (req, res) => {
+  const { name, email, role } = req.body;
+  if (!name || !email) {
+    return res.status(400).json({ success: false, message: 'Name and email are required' });
+  }
+  const newUser = demoStore.createUser(req.body);
+  res.status(201).json({
+    success: true,
+    data: newUser,
+    message: 'User created successfully'
+  });
+});
+
+router.put('/users/:id/status', authenticateDemo, authorizeDemo('admin'), (req, res) => {
+  const user = demoStore.getUserById(req.params.id);
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+  if (user.role === 'admin') {
+    return res.status(400).json({ success: false, message: 'Cannot deactivate admin accounts' });
+  }
+  const updated = demoStore.updateUser(req.params.id, { isActive: req.body.isActive });
+  res.status(200).json({
+    success: true,
+    data: updated
+  });
+});
+
+router.put('/users/:id', authenticateDemo, authorizeDemo('admin'), (req, res) => {
+  const updated = demoStore.updateUser(req.params.id, req.body);
+  if (!updated) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+  res.status(200).json({
+    success: true,
+    data: updated
   });
 });
 
@@ -263,6 +310,15 @@ router.post('/classes/enroll', authenticateDemo, authorizeDemo('student'), (req,
 });
 
 // --- ANNOUNCEMENTS ---
+router.get('/announcements', authenticateDemo, (req, res) => {
+  const list = demoStore.getAnnouncements();
+  res.status(200).json({
+    success: true,
+    count: list.length,
+    data: list
+  });
+});
+
 router.get('/classes/:classId/announcements', authenticateDemo, (req, res) => {
   const list = demoStore.getAnnouncements(req.params.classId);
   res.status(200).json({
@@ -382,18 +438,109 @@ router.post('/classes/:classId/assignments/:assignmentId/submissions', authentic
 
 // --- QUIZZES ---
 router.get('/classes/:classId/quizzes', authenticateDemo, (req, res) => {
+  const quizzes = demoStore.getQuizzes(req.params.classId);
+  const isTeacher = req.user.role === 'admin' || req.user.role === 'teacher';
+  const list = isTeacher ? quizzes : quizzes.filter(q => q.isPublished).map(q => {
+    const copy = { ...q, questions: q.questions.map(item => {
+      const { correctOptionIndex, ...rest } = item;
+      return rest;
+    }) };
+    return copy;
+  });
   res.status(200).json({
     success: true,
-    data: [
-      {
-        _id: 'quiz-01',
-        title: 'Quiz 1: Intelligent Search Fundamentals',
-        description: 'Multiple choice assessment covering heuristics, tree search, and graph algorithms.',
-        durationMinutes: 30,
-        isPublished: true,
-        endTime: new Date(Date.now() + 86400000 * 3).toISOString()
-      }
-    ]
+    count: list.length,
+    data: list
+  });
+});
+
+router.post('/classes/:classId/quizzes', authenticateDemo, authorizeDemo('teacher', 'admin'), (req, res) => {
+  if (!req.body.title || !req.body.title.trim()) {
+    return res.status(400).json({ success: false, message: 'Quiz title is required' });
+  }
+  const newQuiz = demoStore.createQuiz(req.params.classId, req.body, req.user);
+  res.status(201).json({
+    success: true,
+    data: newQuiz,
+    message: 'Quiz created successfully'
+  });
+});
+
+router.get('/classes/:classId/quizzes/:id', authenticateDemo, (req, res) => {
+  const quiz = demoStore.getQuizById(req.params.id);
+  if (!quiz) {
+    return res.status(404).json({ success: false, message: 'Quiz not found' });
+  }
+  const isTeacher = req.user.role === 'admin' || req.user.role === 'teacher';
+  let quizData = { ...quiz };
+  if (!isTeacher) {
+    quizData.questions = (quiz.questions || []).map(q => {
+      const { correctOptionIndex, ...rest } = q;
+      return rest;
+    });
+  }
+  res.status(200).json({
+    success: true,
+    data: quizData
+  });
+});
+
+router.put('/classes/:classId/quizzes/:id', authenticateDemo, authorizeDemo('teacher', 'admin'), (req, res) => {
+  const updated = demoStore.updateQuiz(req.params.id, req.body);
+  if (!updated) {
+    return res.status(404).json({ success: false, message: 'Quiz not found' });
+  }
+  res.status(200).json({
+    success: true,
+    data: updated,
+    message: 'Quiz updated successfully'
+  });
+});
+
+router.delete('/classes/:classId/quizzes/:id', authenticateDemo, authorizeDemo('teacher', 'admin'), (req, res) => {
+  const deleted = demoStore.deleteQuiz(req.params.id);
+  if (!deleted) {
+    return res.status(404).json({ success: false, message: 'Quiz not found' });
+  }
+  res.status(200).json({
+    success: true,
+    message: 'Quiz deleted successfully'
+  });
+});
+
+router.get('/classes/:classId/quizzes/:id/attempts', authenticateDemo, authorizeDemo('teacher', 'admin'), (req, res) => {
+  const attempts = demoStore.getQuizAttempts(req.params.id);
+  res.status(200).json({
+    success: true,
+    data: attempts
+  });
+});
+
+router.get('/classes/:classId/quizzes/:id/attempts/me', authenticateDemo, authorizeDemo('student'), (req, res) => {
+  const attempts = demoStore.getMyAttempts(req.params.id, req.user._id);
+  res.status(200).json({
+    success: true,
+    data: attempts
+  });
+});
+
+router.post('/classes/:classId/quizzes/:id/attempts', authenticateDemo, authorizeDemo('student'), (req, res) => {
+  const attempt = demoStore.startQuizAttempt(req.params.id, req.user);
+  res.status(201).json({
+    success: true,
+    data: attempt
+  });
+});
+
+router.put('/classes/:classId/quizzes/:id/attempts/:attemptId', authenticateDemo, authorizeDemo('student'), (req, res) => {
+  const attempt = demoStore.submitQuizAttempt(req.params.id, req.params.attemptId, req.user._id, req.body.answers || []);
+  if (!attempt) {
+    return res.status(404).json({ success: false, message: 'Attempt not found' });
+  }
+  res.status(200).json({
+    success: true,
+    data: attempt,
+    message: 'Quiz attempt submitted'
   });
 });
 

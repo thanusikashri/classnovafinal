@@ -1,5 +1,6 @@
 const Class = require('../models/Class');
 const Announcement = require('../models/Announcement');
+const Assignment = require('../models/Assignment');
 const StudyMaterial = require('../models/StudyMaterial');
 const AttendanceSession = require('../models/AttendanceSession');
 const AttendanceRecord = require('../models/AttendanceRecord');

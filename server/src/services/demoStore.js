@@ -249,6 +249,56 @@ const initialDemoData = () => {
     }
   ];
 
+  const quizzes = [
+    {
+      _id: 'quiz-01',
+      classId: 'class-cs101',
+      title: 'Quiz 1: Intelligent Search Fundamentals',
+      description: 'Multiple choice assessment covering heuristics, tree search, and graph algorithms.',
+      durationMinutes: 30,
+      isPublished: true,
+      startTime: new Date(Date.now() - 3600000 * 24).toISOString(),
+      endTime: new Date(Date.now() + 86400000 * 5).toISOString(),
+      teacher: 'user-teacher-01',
+      questions: [
+        {
+          _id: 'q-1',
+          text: 'What algorithm is guaranteed to find the shortest path in a graph with non-negative edge weights?',
+          options: ["Dijkstra's Algorithm", "Depth First Search", "Breadth First Search", "Bellman-Ford"],
+          correctOptionIndex: 0,
+          marks: 5
+        },
+        {
+          _id: 'q-2',
+          text: 'Which heuristic property guarantees that A* tree search is optimal?',
+          options: ['Admissibility', 'Consistency', 'Completeness', 'Monotonicity'],
+          correctOptionIndex: 0,
+          marks: 5
+        }
+      ],
+      createdAt: new Date(Date.now() - 3600000 * 24).toISOString()
+    }
+  ];
+
+  const quizAttempts = [
+    {
+      _id: 'attempt-01',
+      quizId: 'quiz-01',
+      studentId: 'user-student-01',
+      studentName: 'Alex Johnson',
+      studentEmail: 'student@demo.classnova.local',
+      score: 10,
+      maxScore: 10,
+      status: 'Submitted',
+      startTime: new Date(Date.now() - 3600000 * 2).toISOString(),
+      submittedAt: new Date(Date.now() - 3600000 * 1.5).toISOString(),
+      answers: [
+        { questionId: 'q-1', selectedOptionIndex: 0 },
+        { questionId: 'q-2', selectedOptionIndex: 0 }
+      ]
+    }
+  ];
+
   return {
     users,
     classes,
@@ -258,7 +308,9 @@ const initialDemoData = () => {
     attendanceSessions,
     attendanceRecords,
     leaveApplications,
-    notifications
+    notifications,
+    quizzes,
+    quizAttempts
   };
 };
 
@@ -590,8 +642,156 @@ class DemoStore {
     return true;
   }
 
+  // --- QUIZZES ---
+  getQuizzes(classId) {
+    if (!classId) return this.data.quizzes || [];
+    return (this.data.quizzes || []).filter(q => q.classId === classId);
+  }
+
+  getQuizById(id) {
+    return (this.data.quizzes || []).find(q => q._id === id);
+  }
+
+  createQuiz(classId, quizData, teacher) {
+    const newQuiz = {
+      _id: `quiz-${Date.now()}`,
+      classId,
+      title: quizData.title,
+      description: quizData.description || '',
+      durationMinutes: Number(quizData.durationMinutes) || 30,
+      startTime: quizData.startTime || new Date().toISOString(),
+      endTime: quizData.endTime || new Date(Date.now() + 86400000 * 7).toISOString(),
+      isPublished: quizData.isPublished !== undefined ? quizData.isPublished : true,
+      teacher: teacher._id,
+      questions: (quizData.questions || []).map((q, idx) => ({
+        _id: `q-${Date.now()}-${idx}`,
+        text: q.text,
+        options: q.options,
+        correctOptionIndex: Number(q.correctOptionIndex) || 0,
+        marks: Number(q.marks) || 1
+      })),
+      createdAt: new Date().toISOString()
+    };
+    if (!this.data.quizzes) this.data.quizzes = [];
+    this.data.quizzes.unshift(newQuiz);
+    return newQuiz;
+  }
+
+  updateQuiz(id, quizData) {
+    const q = this.getQuizById(id);
+    if (!q) return null;
+    if (quizData.title) q.title = quizData.title;
+    if (quizData.description !== undefined) q.description = quizData.description;
+    if (quizData.durationMinutes) q.durationMinutes = Number(quizData.durationMinutes);
+    if (quizData.startTime) q.startTime = quizData.startTime;
+    if (quizData.endTime) q.endTime = quizData.endTime;
+    if (quizData.isPublished !== undefined) q.isPublished = quizData.isPublished;
+    if (quizData.questions) {
+      q.questions = quizData.questions.map((item, idx) => ({
+        _id: item._id || `q-${Date.now()}-${idx}`,
+        text: item.text,
+        options: item.options,
+        correctOptionIndex: Number(item.correctOptionIndex) || 0,
+        marks: Number(item.marks) || 1
+      }));
+    }
+    return q;
+  }
+
+  deleteQuiz(id) {
+    if (!this.data.quizzes) return false;
+    const idx = this.data.quizzes.findIndex(q => q._id === id);
+    if (idx !== -1) {
+      this.data.quizzes.splice(idx, 1);
+      return true;
+    }
+    return false;
+  }
+
+  getQuizAttempts(quizId) {
+    if (!this.data.quizAttempts) return [];
+    return this.data.quizAttempts.filter(a => a.quizId === quizId);
+  }
+
+  getMyAttempts(quizId, studentId) {
+    if (!this.data.quizAttempts) return [];
+    return this.data.quizAttempts.filter(a => a.quizId === quizId && a.studentId === studentId);
+  }
+
+  startQuizAttempt(quizId, student) {
+    if (!this.data.quizAttempts) this.data.quizAttempts = [];
+    let existing = this.data.quizAttempts.find(a => a.quizId === quizId && a.studentId === student._id && a.status === 'In Progress');
+    if (existing) return existing;
+
+    const quiz = this.getQuizById(quizId);
+    const maxScore = quiz ? quiz.questions.reduce((sum, q) => sum + (q.marks || 1), 0) : 0;
+    const attempt = {
+      _id: `attempt-${Date.now()}`,
+      quizId,
+      studentId: student._id,
+      studentName: student.name,
+      studentEmail: student.email,
+      score: 0,
+      maxScore,
+      status: 'In Progress',
+      startTime: new Date().toISOString(),
+      answers: []
+    };
+    this.data.quizAttempts.unshift(attempt);
+    return attempt;
+  }
+
+  submitQuizAttempt(quizId, attemptId, studentId, answers) {
+    if (!this.data.quizAttempts) return null;
+    const attempt = this.data.quizAttempts.find(a => a._id === attemptId);
+    if (!attempt) return null;
+
+    const quiz = this.getQuizById(quizId);
+    let calculatedScore = 0;
+    if (quiz && quiz.questions) {
+      answers.forEach(ans => {
+        const q = quiz.questions.find(item => item._id === ans.questionId);
+        if (q && q.correctOptionIndex === ans.selectedOptionIndex) {
+          calculatedScore += (q.marks || 1);
+        }
+      });
+    }
+
+    attempt.score = calculatedScore;
+    attempt.status = 'Submitted';
+    attempt.submittedAt = new Date().toISOString();
+    attempt.answers = answers;
+    return attempt;
+  }
+
+  // User Management
+  createUser(userData) {
+    const newUser = {
+      _id: `user-${Date.now()}`,
+      name: userData.name,
+      email: userData.email,
+      role: userData.role || 'student',
+      isActive: true,
+      createdAt: new Date().toISOString()
+    };
+    this.data.users.unshift(newUser);
+    return newUser;
+  }
+
+  updateUser(id, updates) {
+    const user = this.getUserById(id);
+    if (!user) return null;
+    if (updates.name) user.name = updates.name;
+    if (updates.email) user.email = updates.email;
+    if (updates.role) user.role = updates.role;
+    if (updates.isActive !== undefined) user.isActive = updates.isActive;
+    return user;
+  }
+
   // --- ADMIN STATS ---
   getAdminStats() {
+    const totalQuizzes = (this.data.quizzes || []).length;
+    const totalAttempts = (this.data.quizAttempts || []).length;
     return {
       users: {
         total: this.data.users.length,
@@ -615,7 +815,10 @@ class DemoStore {
         pending: this.data.leaveApplications.filter(l => l.status === 'pending').length,
         total: this.data.leaveApplications.length
       },
-      assessments: null
+      assessments: {
+        totalQuizzes,
+        totalAttempts
+      }
     };
   }
 }

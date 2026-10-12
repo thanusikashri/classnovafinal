@@ -1,12 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, AlertCircle } from 'lucide-react';
+import { Search, Filter, AlertCircle, Plus, UserPlus } from 'lucide-react';
 import api from '../../services/api';
 
-const AdminUsers = () => {
+const AdminUsers = ({ initialRole = '' }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState(initialRole);
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newRole, setNewRole] = useState(initialRole || 'student');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (initialRole) {
+      setRoleFilter(initialRole);
+      setNewRole(initialRole);
+    }
+  }, [initialRole]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -49,13 +62,49 @@ const AdminUsers = () => {
     }
   };
 
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    if (!newName.trim() || !newEmail.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await api.post('/users', {
+        name: newName.trim(),
+        email: newEmail.trim(),
+        role: newRole
+      });
+      setShowCreateModal(false);
+      setNewName('');
+      setNewEmail('');
+      fetchUsers();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error creating user');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getPageTitle = () => {
+    if (initialRole === 'student') return 'Student Management';
+    if (initialRole === 'teacher') return 'Teacher Management';
+    return 'User Directory Management';
+  };
+
   return (
-    <div className="font-sans max-w-7xl mx-auto mt-2">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+    <div className="font-sans max-w-7xl mx-auto mt-2 pb-12">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5">
         <div>
-          <h1 className="text-2xl font-medium text-content">User management</h1>
-          <p className="text-sm text-muted mt-1">View and manage system accounts</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-content">{getPageTitle()}</h1>
+          <p className="text-sm text-muted mt-1">
+            {initialRole ? `View and administer all registered ${initialRole} accounts` : 'View, register, and manage platform user credentials'}
+          </p>
         </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="btn-primary text-sm flex items-center gap-2 shadow-sm self-start sm:self-auto"
+        >
+          <UserPlus size={16} />
+          <span>Create New User</span>
+        </button>
       </div>
 
       <div className="card-surface overflow-hidden">
@@ -154,6 +203,78 @@ const AdminUsers = () => {
           )}
         </div>
       </div>
+
+      {/* Create User Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="card-surface p-6 sm:p-8 rounded-2xl max-w-md w-full">
+            <h2 className="text-xl font-bold text-content mb-1">Create User Account</h2>
+            <p className="text-xs text-muted mb-6">Register a new profile directly in the directory.</p>
+
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-content uppercase tracking-wider mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. John Doe"
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  className="input-field text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-content uppercase tracking-wider mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. john@university.edu"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                  className="input-field text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-content uppercase tracking-wider mb-1">
+                  System Role
+                </label>
+                <select
+                  value={newRole}
+                  onChange={e => setNewRole(e.target.value)}
+                  className="input-field text-sm capitalize"
+                >
+                  <option value="student">Student</option>
+                  <option value="teacher">Teacher</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="btn-secondary text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="btn-primary text-sm shadow-sm"
+                >
+                  {isSubmitting ? 'Creating...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

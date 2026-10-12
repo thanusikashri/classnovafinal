@@ -1,17 +1,48 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Menu, Home, User, BookOpen, Settings, LogOut, Sun, Moon, Bell, Check } from 'lucide-react';
+import {
+  Menu,
+  X,
+  Home,
+  User,
+  BookOpen,
+  Settings,
+  LogOut,
+  Sun,
+  Moon,
+  Bell,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle,
+  FileText,
+  Calendar,
+  Clock,
+  Sparkles,
+  ClipboardList,
+  Users,
+  FileCheck,
+  Megaphone,
+  BarChart3,
+  Shield,
+  GraduationCap
+} from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import api from '../../services/api';
 
 const MainLayout = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Desktop sidebar: true = expanded (w-64), false = collapsed icon rail (w-20)
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  // Mobile drawer: true = drawer open
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -38,7 +69,7 @@ const MainLayout = () => {
   useEffect(() => {
     if (user) {
       fetchUnreadCount();
-      const interval = setInterval(fetchUnreadCount, 30000); // 30 seconds
+      const interval = setInterval(fetchUnreadCount, 30000);
       return () => clearInterval(interval);
     }
   }, [user, fetchUnreadCount]);
@@ -58,6 +89,11 @@ const MainLayout = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileDrawerOpen(false);
+  }, [location.pathname]);
 
   const handleMarkAsRead = async (id, e) => {
     e.stopPropagation();
@@ -90,97 +126,184 @@ const MainLayout = () => {
     }
   };
 
-  const getNavLinks = () => {
-    const base = [
-      { name: 'Classes', path: `/${user?.role}-dashboard`, icon: Home },
-      { name: 'Profile', path: '/profile', icon: User },
-    ];
-    if (user?.role === 'admin') {
-      base.push({ name: 'User Management', path: '/admin/users', icon: Settings });
+  // Role-specific Sidebar Menus
+  const getRoleNavLinks = () => {
+    const role = user?.role;
+
+    if (role === 'student') {
+      return [
+        { name: 'Dashboard', path: '/student-dashboard', icon: Home },
+        { name: 'My Classes', path: '/classes', icon: BookOpen },
+        { name: 'Quizzes', path: '/quizzes', icon: HelpCircle },
+        { name: 'Assignments', path: '/assignments', icon: FileText },
+        { name: 'Leave Requests', path: '/leave-requests', icon: Calendar },
+        { name: 'Attendance', path: '/attendance', icon: Clock },
+        { name: 'Notifications', path: '/notifications', icon: Bell, badge: unreadCount },
+        { name: 'Profile', path: '/profile', icon: User },
+        { name: 'Settings', path: '/settings', icon: Settings },
+      ];
     }
-    return base;
+
+    if (role === 'teacher') {
+      return [
+        { name: 'Dashboard', path: '/teacher-dashboard', icon: Home },
+        { name: 'My Classes', path: '/classes', icon: BookOpen },
+        { name: 'Students', path: '/teacher/students', icon: Users },
+        { name: 'Quiz Generator', path: '/quiz-generator', icon: Sparkles },
+        { name: 'Quiz Management', path: '/quiz-management', icon: ClipboardList },
+        { name: 'Assignments', path: '/assignments', icon: FileText },
+        { name: 'Leave Requests', path: '/leave-requests', icon: Calendar },
+        { name: 'Attendance', path: '/attendance', icon: Clock },
+        { name: 'Materials', path: '/materials', icon: FileCheck },
+        { name: 'Announcements', path: '/announcements', icon: Megaphone },
+        { name: 'Notifications', path: '/notifications', icon: Bell, badge: unreadCount },
+        { name: 'Profile', path: '/profile', icon: User },
+        { name: 'Settings', path: '/settings', icon: Settings },
+      ];
+    }
+
+    if (role === 'admin') {
+      return [
+        { name: 'Dashboard', path: '/admin-dashboard', icon: Home },
+        { name: 'User Management', path: '/admin/users', icon: Users },
+        { name: 'Course Management', path: '/admin/courses', icon: BookOpen },
+        { name: 'Student Management', path: '/admin/students', icon: GraduationCap },
+        { name: 'Teacher Management', path: '/admin/teachers', icon: Shield },
+        { name: 'Quiz and Assignment Oversight', path: '/admin/assessments', icon: ClipboardList },
+        { name: 'Announcements', path: '/announcements', icon: Megaphone },
+        { name: 'Reports and Analytics', path: '/admin/reports', icon: BarChart3 },
+        { name: 'Profile', path: '/profile', icon: User },
+        { name: 'Settings', path: '/settings', icon: Settings },
+      ];
+    }
+
+    return [
+      { name: 'Dashboard', path: '/', icon: Home },
+      { name: 'Profile', path: '/profile', icon: User }
+    ];
   };
 
-  const navLinks = getNavLinks();
+  const navLinks = getRoleNavLinks();
 
   const isActive = (path) => {
-    if (path === `/${user?.role}-dashboard` && location.pathname === `/${user?.role}-dashboard`) return true;
-    if (path !== `/${user?.role}-dashboard` && location.pathname.startsWith(path)) return true;
+    if (location.pathname === path) return true;
+    if (path !== '/' && path !== `/${user?.role}-dashboard` && location.pathname.startsWith(path)) {
+      return true;
+    }
     return false;
   };
 
   return (
-    <div className="flex h-screen bg-base font-sans text-content transition-colors duration-300">
-      {/* Topbar */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-surface border-b border-border flex items-center justify-between px-4 z-30 transition-colors duration-300">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setSidebarOpen(!sidebarOpen)} 
-            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 text-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary-200"
-            aria-label="Toggle menu"
+    <div className="flex h-screen bg-base font-sans text-content transition-colors duration-300 overflow-hidden">
+      {/* Top Navbar */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-surface border-b border-border flex items-center justify-between px-4 sm:px-6 z-30 transition-colors duration-300">
+        <div className="flex items-center gap-3">
+          {/* Mobile hamburger button */}
+          <button
+            onClick={() => setMobileDrawerOpen(prev => !prev)}
+            className="md:hidden p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-muted transition-colors focus:outline-none"
+            aria-label="Toggle mobile navigation"
           >
-            <Menu size={24} />
+            {mobileDrawerOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
-          <div className="flex items-center gap-2">
-            <BookOpen size={24} className="text-primary-500" />
-            <span className="text-xl text-content tracking-tight font-semibold">ClassNova</span>
-          </div>
+
+          {/* Desktop collapse / expand button */}
+          <button
+            onClick={() => setSidebarExpanded(prev => !prev)}
+            className="hidden md:flex p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-muted transition-colors focus:outline-none"
+            aria-label={sidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+            title={sidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
+            <Menu size={20} />
+          </button>
+
+          <Link to={`/${user?.role}-dashboard`} className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-xl bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400">
+              <BookOpen size={20} />
+            </div>
+            <span className="text-xl text-content tracking-tight font-bold">ClassNova</span>
+          </Link>
         </div>
-        
-        <div className="flex items-center gap-4">
+
+        {/* Topbar Right Profile & Quick Actions */}
+        <div className="flex items-center gap-3 sm:gap-4">
+          {/* Role badge */}
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-base border border-border text-xs">
+            <span className="text-muted">Role:</span>
+            <span className="font-semibold capitalize text-primary-600 dark:text-primary-400">
+              {user?.role || 'Guest'}
+            </span>
+          </div>
+
+          {/* Dark / Light Toggle */}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+            className="p-2 rounded-full text-muted hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
             aria-label="Toggle Theme"
           >
-            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            {theme === 'dark' ? <Sun size={19} className="text-amber-400" /> : <Moon size={19} className="text-indigo-600" />}
           </button>
-          
+
+          {/* Notifications Dropdown */}
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors relative"
+              className="p-2 rounded-full text-muted hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative"
               aria-label="Notifications"
             >
-              <Bell size={20} />
+              <Bell size={19} />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full">
+                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full animate-pulse">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
             </button>
-            
+
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-surface border border-border rounded-lg shadow-lg overflow-hidden z-50">
-                <div className="p-3 border-b border-border flex justify-between items-center bg-base">
-                  <h3 className="font-medium text-content">Notifications</h3>
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-surface border border-border rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="p-3.5 border-b border-border flex justify-between items-center bg-base/50">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-content text-sm">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-100 text-primary-700 dark:bg-primary-900/60 dark:text-primary-300">
+                        {unreadCount} unread
+                      </span>
+                    )}
+                  </div>
                   {unreadCount > 0 && (
-                    <button 
+                    <button
                       onClick={handleMarkAllRead}
-                      className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                      className="text-xs text-primary-600 dark:text-primary-400 hover:underline font-medium"
                     >
-                      Mark all as read
+                      Mark all read
                     </button>
                   )}
                 </div>
-                <div className="max-h-80 overflow-y-auto">
+
+                <div className="max-h-80 overflow-y-auto divide-y divide-border">
                   {notifications.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-muted">No notifications</div>
+                    <div className="p-8 text-center text-sm text-muted">No notifications right now</div>
                   ) : (
                     notifications.map(notif => (
-                      <div 
-                        key={notif._id} 
+                      <div
+                        key={notif._id}
                         onClick={() => handleNotificationClick(notif)}
-                        className={`p-3 border-b border-border hover:bg-base cursor-pointer transition-colors ${!notif.isRead ? 'bg-primary-50 dark:bg-primary-900/10' : ''}`}
+                        className={`p-3.5 hover:bg-base/80 cursor-pointer transition-colors ${
+                          !notif.isRead ? 'bg-primary-50/50 dark:bg-primary-950/20' : ''
+                        }`}
                       >
                         <div className="flex justify-between items-start gap-2">
                           <div>
-                            <p className={`text-sm ${!notif.isRead ? 'font-medium text-content' : 'text-muted'}`}>{notif.title}</p>
-                            <p className="text-xs text-muted mt-1 line-clamp-2">{notif.message}</p>
-                            <p className="text-[10px] text-muted opacity-70 mt-1">{new Date(notif.createdAt).toLocaleString()}</p>
+                            <p className={`text-xs ${!notif.isRead ? 'font-bold text-content' : 'font-medium text-muted'}`}>
+                              {notif.title}
+                            </p>
+                            <p className="text-xs text-muted mt-0.5 line-clamp-2 leading-relaxed">{notif.message}</p>
+                            <p className="text-[10px] text-muted opacity-60 mt-1 font-mono">
+                              {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
                           </div>
                           {!notif.isRead && (
-                            <button 
+                            <button
                               onClick={(e) => handleMarkAsRead(notif._id, e)}
                               className="p-1 rounded-full text-primary-600 hover:bg-primary-100 dark:hover:bg-primary-900 shrink-0"
                               title="Mark as read"
@@ -193,72 +316,214 @@ const MainLayout = () => {
                     ))
                   )}
                 </div>
+
+                <div className="p-2 border-t border-border bg-base/30 text-center">
+                  <Link
+                    to="/notifications"
+                    onClick={() => setShowNotifications(false)}
+                    className="text-xs text-primary-600 dark:text-primary-400 font-semibold hover:underline block py-1"
+                  >
+                    View all notifications
+                  </Link>
+                </div>
               </div>
             )}
           </div>
 
-          <div className="w-9 h-9 rounded-full bg-primary-500 text-white flex items-center justify-center font-medium shadow-sm select-none cursor-pointer hover:bg-primary-600 transition-colors">
-            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-          </div>
+          {/* User Name & Avatar */}
+          <Link to="/profile" className="flex items-center gap-2 pl-2 border-l border-border hover:opacity-80 transition-opacity">
+            <div className="w-9 h-9 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-sm shadow-xs select-none">
+              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+            </div>
+            <div className="hidden lg:block text-left">
+              <span className="text-xs font-bold text-content block line-clamp-1">{user?.name || 'User'}</span>
+              <span className="text-[10px] text-muted capitalize block leading-tight">{user?.role || 'User'}</span>
+            </div>
+          </Link>
         </div>
       </header>
 
-      {/* Sidebar Overlay (Mobile & Desktop) */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setSidebarOpen(false)}></div>
-      )}
-
-      {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 bottom-0 w-72 bg-surface z-50 transform transition-all duration-300 ease-in-out border-r border-border ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="h-16 flex items-center border-b border-border px-4 transition-colors">
-          <button 
-            onClick={() => setSidebarOpen(false)} 
-            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 text-muted transition-colors"
-          >
-            <Menu size={24} />
-          </button>
-          <div className="flex items-center gap-2 ml-4">
-            <BookOpen size={24} className="text-primary-500" />
-            <span className="text-xl text-content tracking-tight font-semibold">ClassNova</span>
+      {/* =========================================================================
+          DESKTOP SIDEBAR (Static flex child, NEVER covers content with grey overlay)
+          ========================================================================= */}
+      <aside
+        className={`hidden md:flex flex-col mt-16 bg-surface border-r border-border shrink-0 transition-all duration-300 ease-in-out select-none z-20 ${
+          sidebarExpanded ? 'w-64' : 'w-20'
+        }`}
+      >
+        {/* User Card when expanded */}
+        <div className={`p-4 border-b border-border transition-opacity duration-200 ${sidebarExpanded ? 'opacity-100' : 'hidden'}`}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+            </div>
+            <div className="overflow-hidden">
+              <h4 className="text-sm font-bold text-content truncate">{user?.name || 'ClassNova User'}</h4>
+              <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-900/40">
+                {user?.role} Portal
+              </span>
+            </div>
           </div>
         </div>
 
-        <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100vh-64px)] pb-20">
+        {/* Scrollable Nav Links */}
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden">
           {navLinks.map((link) => {
             const Icon = link.icon;
             const active = isActive(link.path);
+
             return (
-              <Link 
-                key={link.name} 
-                to={link.path} 
-                onClick={() => setSidebarOpen(false)} 
-                className={`flex items-center gap-4 px-4 py-3 rounded-r-full -ml-3 pl-7 transition-colors ${
-                  active 
-                    ? 'bg-primary-100 text-primary-800 dark:bg-primary-900/40 dark:text-primary-300 font-medium' 
-                    : 'text-muted hover:bg-gray-100 dark:hover:bg-slate-700/50 hover:text-content'
+              <Link
+                key={link.name}
+                to={link.path}
+                title={!sidebarExpanded ? link.name : undefined}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all group relative ${
+                  active
+                    ? 'bg-primary-100 text-primary-800 dark:bg-primary-900/40 dark:text-primary-300 font-semibold shadow-xs'
+                    : 'text-muted hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-content'
+                } ${!sidebarExpanded ? 'justify-center' : ''}`}
+              >
+                <Icon
+                  size={20}
+                  className={`shrink-0 transition-colors ${
+                    active ? 'text-primary-600 dark:text-primary-400' : 'text-muted group-hover:text-content'
+                  }`}
+                />
+
+                {sidebarExpanded && (
+                  <span className="truncate flex-1 text-left">{link.name}</span>
+                )}
+
+                {sidebarExpanded && link.badge > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500 text-white shrink-0">
+                    {link.badge > 9 ? '9+' : link.badge}
+                  </span>
+                )}
+
+                {/* Tooltip for collapsed mode */}
+                {!sidebarExpanded && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 font-sans font-normal">
+                    {link.name}
+                  </div>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Bottom Sign Out & Collapse Footer */}
+        <div className="p-3 border-t border-border space-y-1">
+          <button
+            onClick={logout}
+            title={!sidebarExpanded ? 'Sign Out' : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm text-muted hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-600 transition-colors group relative ${
+              !sidebarExpanded ? 'justify-center' : ''
+            }`}
+          >
+            <LogOut size={20} className="shrink-0 text-muted group-hover:text-rose-600" />
+            {sidebarExpanded && <span>Sign Out</span>}
+            {!sidebarExpanded && (
+              <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 font-sans font-normal">
+                Sign Out
+              </div>
+            )}
+          </button>
+        </div>
+      </aside>
+
+      {/* =========================================================================
+          MOBILE DRAWER (Overlay ONLY on mobile screens < 768px)
+          ========================================================================= */}
+      {mobileDrawerOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity"
+          onClick={() => setMobileDrawerOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`md:hidden fixed top-0 left-0 bottom-0 w-72 bg-surface z-50 transform transition-transform duration-300 ease-in-out border-r border-border flex flex-col ${
+          mobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="h-16 flex items-center justify-between px-4 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-xl bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400">
+              <BookOpen size={20} />
+            </div>
+            <span className="text-xl text-content tracking-tight font-bold">ClassNova</span>
+          </div>
+          <button
+            onClick={() => setMobileDrawerOpen(false)}
+            className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-muted"
+            aria-label="Close menu"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* User preview */}
+        <div className="p-4 border-b border-border bg-base/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+            </div>
+            <div className="overflow-hidden">
+              <h4 className="text-sm font-bold text-content truncate">{user?.name}</h4>
+              <span className="text-xs text-muted capitalize font-medium">{user?.role} Portal</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Nav */}
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          {navLinks.map((link) => {
+            const Icon = link.icon;
+            const active = isActive(link.path);
+
+            return (
+              <Link
+                key={link.name}
+                to={link.path}
+                onClick={() => setMobileDrawerOpen(false)}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-colors ${
+                  active
+                    ? 'bg-primary-100 text-primary-800 dark:bg-primary-900/40 dark:text-primary-300 font-semibold'
+                    : 'text-muted hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-content'
                 }`}
               >
-                <Icon size={20} className={active ? 'text-primary-600 dark:text-primary-400' : 'text-muted'} />
-                <span>{link.name}</span>
+                <div className="flex items-center gap-3">
+                  <Icon size={19} className={active ? 'text-primary-600 dark:text-primary-400' : 'text-muted'} />
+                  <span>{link.name}</span>
+                </div>
+                {link.badge > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500 text-white">
+                    {link.badge}
+                  </span>
+                )}
               </Link>
-            )
+            );
           })}
-
-          <div className="pt-4 mt-4 border-t border-border">
-            <button 
-              onClick={logout} 
-              className="w-full flex items-center gap-4 px-4 py-3 rounded-r-full -ml-3 pl-7 text-muted hover:bg-gray-100 dark:hover:bg-slate-700/50 hover:text-red-500 transition-colors"
-            >
-              <LogOut size={20} />
-              <span>Sign out</span>
-            </button>
-          </div>
         </nav>
+
+        {/* Mobile Sign out */}
+        <div className="p-3 border-t border-border">
+          <button
+            onClick={() => {
+              setMobileDrawerOpen(false);
+              logout();
+            }}
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm text-muted hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-600 transition-colors"
+          >
+            <LogOut size={19} />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main Content Area */}
       <main className="flex-1 mt-16 overflow-y-auto bg-base transition-colors duration-300">
-        <div className="p-6 md:p-8 max-w-7xl mx-auto min-h-full">
+        <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto min-h-full">
           <Outlet />
         </div>
       </main>
