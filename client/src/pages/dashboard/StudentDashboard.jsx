@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, MoreVertical, BookOpen, Clock, Calendar, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, BookOpen, Clock, Calendar, CheckCircle2, AlertCircle, FileText, ArrowRight } from 'lucide-react';
 import api from '../../services/api';
 import MaterialModal from '../../components/MaterialModal';
 
@@ -33,6 +33,7 @@ const StudentDashboard = () => {
   const [dashboardData, setDashboardData] = useState({
     announcements: [],
     attendance: 100,
+    leaves: [],
     pendingLeaves: [],
     recentMaterials: [],
     upcomingAssessments: []
@@ -45,6 +46,7 @@ const StudentDashboard = () => {
       setDashboardData({
         announcements: res.data.data.announcements || [],
         attendance: res.data.data.attendance !== undefined ? res.data.data.attendance : 100,
+        leaves: res.data.data.leaves || res.data.data.pendingLeaves || [],
         pendingLeaves: res.data.data.pendingLeaves || [],
         recentMaterials: res.data.data.recentMaterials || [],
         upcomingAssessments: res.data.data.upcomingAssessments || []
@@ -54,7 +56,7 @@ const StudentDashboard = () => {
         if (!leaveForm.classId) setLeaveForm(prev => ({ ...prev, classId: res.data.data.classes[0]._id }));
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to load student dashboard', err);
     } finally {
       setLoading(false);
     }
@@ -66,15 +68,16 @@ const StudentDashboard = () => {
 
   const handleJoinClass = async (e) => {
     e.preventDefault();
-    setError('');
+    if (!classCode.trim()) return;
     setIsSubmitting(true);
+    setError('');
     try {
-      await api.post('/classes/enroll', { classCode });
+      await api.post('/classes/enroll', { code: classCode.trim() });
       setShowJoinModal(false);
       setClassCode('');
       fetchDashboard();
     } catch (err) {
-      setError(err.response?.data?.message || 'Error joining class');
+      setError(err.response?.data?.message || 'Failed to enroll in class. Verify the code.');
     } finally {
       setIsSubmitting(false);
     }
@@ -82,20 +85,23 @@ const StudentDashboard = () => {
 
   const handleSubmitOtp = async (e) => {
     e.preventDefault();
-    setOtpMessage({ text: '', isError: false });
+    if (!selectedClassForOtp || enteredOtp.length !== 6) return;
     setIsSubmitting(true);
+    setOtpMessage({ text: '', isError: false });
     try {
-      // First get active session for this class
-      const sessionRes = await api.get(`/attendance/classes/${selectedClassForOtp}/active`);
-      if (!sessionRes.data.data) {
-        setOtpMessage({ text: 'No active attendance session currently running for this class.', isError: true });
+      const activeRes = await api.get(`/attendance/classes/${selectedClassForOtp}/active`);
+      const session = activeRes.data.data;
+      if (!session) {
+        setOtpMessage({ text: 'No active attendance session found for this class', isError: true });
         setIsSubmitting(false);
         return;
       }
-
-      const sessionId = sessionRes.data.data.sessionId;
-      await api.post('/attendance/submit', { sessionId, otp: enteredOtp });
-      setOtpMessage({ text: 'Attendance marked successfully!', isError: false });
+      const sessId = session.sessionId || session._id;
+      await api.post('/attendance/submit', {
+        sessionId: sessId,
+        otp: enteredOtp
+      });
+      setOtpMessage({ text: 'Attendance checked in successfully!', isError: false });
       setEnteredOtp('');
       setTimeout(() => {
         setShowOtpModal(false);
@@ -139,218 +145,269 @@ const StudentDashboard = () => {
     }
   };
 
-  const getBannerGradient = (index) => {
-    const gradients = [
-      'bg-blue-600',
-      'bg-indigo-600',
-      'bg-teal-600',
-      'bg-rose-600',
-      'bg-emerald-600',
-      'bg-purple-600'
+  const getBannerColor = (index) => {
+    const colors = [
+      'bg-slate-800 text-white',
+      'bg-indigo-900 text-white',
+      'bg-teal-900 text-white',
+      'bg-sky-900 text-white'
     ];
-    return gradients[index % gradients.length];
+    return colors[index % colors.length];
   };
 
   return (
-    <div className="space-y-8 font-sans">
-      {/* Top Header Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-8 font-sans pb-12">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
         <div>
-          <h1 className="text-2xl font-medium text-content">Student Dashboard</h1>
-          <p className="text-sm text-muted mt-1">Overview of your enrolled classes, attendance, and materials</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-content">Student Portal</h1>
+          <p className="text-sm text-muted mt-1">Overview of your enrolled classes, course assignments, and attendance records</p>
         </div>
         <div className="flex items-center gap-3">
           {classes.length > 0 && (
             <>
               <button
                 onClick={() => setShowOtpModal(true)}
-                className="btn-secondary flex items-center gap-2 text-sm"
+                className="btn-secondary flex items-center gap-2 text-xs"
               >
-                <Clock size={16} />
+                <Clock size={15} />
                 <span>Submit OTP</span>
               </button>
               <button
                 onClick={() => setShowLeaveModal(true)}
-                className="btn-secondary flex items-center gap-2 text-sm"
+                className="btn-secondary flex items-center gap-2 text-xs"
               >
-                <Calendar size={16} />
+                <Calendar size={15} />
                 <span>Apply Leave</span>
               </button>
             </>
           )}
           <button
             onClick={() => setShowJoinModal(true)}
-            className="btn-primary flex items-center gap-2 text-sm"
+            className="btn-primary flex items-center gap-2 text-xs shadow-sm"
           >
-            <Plus size={18} />
-            <span>Join Class</span>
+            <Plus size={16} />
+            <span>Enroll in Class</span>
           </button>
         </div>
       </div>
 
       {/* Classes Grid */}
       <div>
-        <h2 className="text-lg font-semibold text-content mb-4">My Enrolled Classes</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-base font-semibold text-content">Available Courses ({classes.length})</h2>
+            <p className="text-xs text-muted mt-0.5">All academic courses created by faculty across departments</p>
+          </div>
+          <button
+            onClick={() => setShowJoinModal(true)}
+            className="text-xs text-primary-600 hover:underline font-medium"
+          >
+            + Enter Enrollment Code
+          </button>
+        </div>
         {loading ? (
-          <div className="flex justify-center py-16 text-muted">Loading enrolled classes...</div>
+          <div className="flex justify-center py-16 text-muted text-sm">Loading available courses...</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {classes.map((cls, idx) => (
-              <div key={cls._id} className="card-surface overflow-hidden hover:shadow-lg flex flex-col h-72 relative group">
-                <Link to={`/classes/${cls._id}`} className={`h-24 p-4 text-white relative block ${getBannerGradient(idx)}`}>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-xl font-medium truncate hover:underline" title={cls.name}>{cls.name}</h3>
-                      <p className="text-sm opacity-90 truncate mt-1" title={cls.description}>{cls.description || 'No description'}</p>
-                    </div>
-                  </div>
-                </Link>
+              <div key={cls._id} className="card-surface rounded-xl overflow-hidden border border-border hover:shadow-md transition-shadow flex flex-col h-64">
+                <div className={`p-4 ${getBannerColor(idx)} flex flex-col justify-between h-24`}>
+                  <Link to={`/classes/${cls._id}`} className="hover:underline">
+                    <h3 className="font-semibold text-base line-clamp-1" title={cls.name}>{cls.name}</h3>
+                  </Link>
+                  <p className="text-xs opacity-85 truncate">{cls.description || 'Academic course'}</p>
+                </div>
                 
                 <div className="p-4 flex-1 flex flex-col justify-between">
                   <div className="text-xs text-muted flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300 flex items-center justify-center font-medium">
+                    <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-medium shrink-0">
                       {cls.teacher?.name ? cls.teacher.name.charAt(0).toUpperCase() : 'T'}
                     </div>
-                    <span className="truncate">{cls.teacher?.name || 'Unknown Teacher'}</span>
+                    <span className="truncate">{cls.teacher?.name || 'Instructor'}</span>
                   </div>
 
                   <div className="text-xs text-muted flex justify-between items-center border-t border-border pt-3">
-                    <span>{cls.students?.length || 0} classmates</span>
-                    <Link to={`/classes/${cls._id}`} className="text-primary-600 hover:underline">
-                      View Class →
+                    <span className="font-mono text-[11px] bg-base px-2 py-0.5 rounded border border-border">
+                      {cls.code || cls.classCode || 'OPEN'}
+                    </span>
+                    <Link to={`/classes/${cls._id}`} className="text-primary-600 hover:underline flex items-center gap-1 font-medium">
+                      Course Details <ArrowRight size={14} />
                     </Link>
                   </div>
                 </div>
               </div>
             ))}
+
             {classes.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted border border-dashed border-border rounded-xl">
-                <div className="bg-surface border border-border p-4 rounded-full mb-3">
-                  <BookOpen size={36} className="text-muted" />
-                </div>
-                <h3 className="text-base font-medium text-content mb-1">You haven't joined any classes yet</h3>
-                <p className="text-xs mb-4">Enter a 6-character class code from your teacher to join.</p>
-                <button
-                  onClick={() => setShowJoinModal(true)}
-                  className="btn-primary text-sm"
-                >
-                  Join Class
-                </button>
+                <BookOpen size={32} className="text-muted mb-2" />
+                <h3 className="text-sm font-semibold text-content">No courses available yet</h3>
+                <p className="text-xs text-muted mt-1">Faculty course offerings will appear here as soon as they are created.</p>
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Attendance & Leave Metric Panels */}
+      {/* Attendance & Upcoming Work Section */}
       {!loading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Real Attendance Percentage Card */}
-          <div className="card-surface p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Real Attendance Card */}
+          <div className="card-surface p-6 rounded-xl border border-border">
             <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-              <h3 className="text-base font-medium text-content flex items-center gap-2">
-                <Clock size={18} className="text-primary-600" />
-                Overall Attendance
+              <h3 className="text-sm font-semibold text-content flex items-center gap-2">
+                <Clock size={16} className="text-primary-600" />
+                Attendance Standing
               </h3>
-              <span className="text-xs text-muted">Excludes approved leave dates</span>
+              <span className="text-xs text-muted">Excludes approved leaves</span>
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-4xl font-bold text-primary-600 dark:text-primary-400">
+                <div className="text-4xl font-bold tracking-tight text-primary-600 dark:text-primary-400">
                   {dashboardData.attendance}%
                 </div>
                 <p className="text-xs text-muted mt-1">
                   {dashboardData.attendance >= 75
-                    ? 'Good standing (Above standard 75% requirement)'
-                    : 'Attention: Attendance below 75% threshold'}
+                    ? 'In good standing (Meets minimum 75% requirement)'
+                    : 'Notice: Below required 75% attendance threshold'}
                 </p>
               </div>
               <button
                 onClick={() => setShowOtpModal(true)}
                 className="btn-secondary text-xs px-3 py-2"
               >
-                Mark Attendance
+                Enter OTP
               </button>
             </div>
           </div>
 
-          {/* Pending Leaves Card */}
-          <div className="card-surface p-6">
+          {/* Upcoming Assignments / Tasks */}
+          <div className="card-surface p-6 rounded-xl border border-border">
             <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-              <h3 className="text-base font-medium text-content flex items-center gap-2">
-                <Calendar size={18} className="text-amber-500" />
-                Pending Leaves ({dashboardData.pendingLeaves.length})
+              <h3 className="text-sm font-semibold text-content flex items-center gap-2">
+                <FileText size={16} className="text-primary-600" />
+                Upcoming Coursework ({dashboardData.upcomingAssessments.length})
               </h3>
-              <button
-                onClick={() => setShowLeaveModal(true)}
-                className="text-xs text-primary-600 hover:underline"
-              >
-                + New Application
-              </button>
             </div>
-            {dashboardData.pendingLeaves.length > 0 ? (
+            {dashboardData.upcomingAssessments.length > 0 ? (
               <div className="space-y-3">
-                {dashboardData.pendingLeaves.map(leave => (
-                  <div key={leave._id} className="p-3 bg-base rounded-lg border border-border flex items-center justify-between">
+                {dashboardData.upcomingAssessments.map(item => (
+                  <div key={item._id} className="p-3 bg-base rounded-lg border border-border flex items-center justify-between">
                     <div>
-                      <span className="text-sm font-medium text-content block">{leave.classId?.name}</span>
+                      <Link to={`/classes/${item.classId}/assignments/${item._id}`} className="text-sm font-medium text-content hover:underline block">
+                        {item.title}
+                      </Link>
                       <span className="text-xs text-muted">
-                        {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()} • "{leave.reason}"
+                        Due: {new Date(item.dueDate).toLocaleDateString()}
                       </span>
                     </div>
-                    <button
-                      onClick={() => handleCancelLeave(leave._id)}
-                      className="text-xs text-red-500 hover:text-red-700 underline"
-                    >
-                      Cancel
-                    </button>
+                    <Link to={`/classes/${item.classId}`} className="text-xs text-primary-600 hover:underline shrink-0">
+                      View →
+                    </Link>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-muted text-sm py-4">No pending leave applications.</p>
+              <p className="text-muted text-xs text-center py-6">No upcoming assignments due soon.</p>
             )}
           </div>
 
           {/* Recent Announcements */}
-          <div className="card-surface p-6">
-            <h3 className="text-base font-medium text-content mb-4 border-b border-border pb-3">Recent Announcements</h3>
+          <div className="card-surface p-6 rounded-xl border border-border">
+            <h3 className="text-sm font-semibold text-content mb-4 border-b border-border pb-3">Recent Class Announcements</h3>
             {dashboardData.announcements.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {dashboardData.announcements.map(ann => (
-                  <div key={ann._id} className="border-l-2 border-primary-500 pl-4 py-1">
-                    <p className="text-sm font-medium text-content">{ann.classId?.name}</p>
-                    <p className="text-sm text-muted mt-1">{ann.content}</p>
-                    <p className="text-xs text-muted mt-2">{new Date(ann.createdAt).toLocaleDateString()}</p>
+                  <div key={ann._id} className="border-l-2 border-primary-500 pl-3 py-1">
+                    <p className="text-xs font-semibold text-content">{ann.classId?.name || 'Class'}</p>
+                    <p className="text-xs text-muted mt-0.5 line-clamp-2">{ann.content}</p>
+                    <p className="text-[10px] text-muted opacity-75 mt-1">{new Date(ann.createdAt).toLocaleDateString()}</p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-muted text-sm py-4">No recent announcements in your classes.</p>
+              <p className="text-muted text-xs text-center py-6">No announcements published yet.</p>
             )}
           </div>
 
           {/* Recent Materials */}
-          <div className="card-surface p-6">
-            <h3 className="text-base font-medium text-content mb-4 border-b border-border pb-3">Recent Materials</h3>
+          <div className="card-surface p-6 rounded-xl border border-border">
+            <h3 className="text-sm font-semibold text-content mb-4 border-b border-border pb-3">Course Materials</h3>
             {dashboardData.recentMaterials && dashboardData.recentMaterials.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {dashboardData.recentMaterials.map(mat => (
-                  <div key={mat._id} className="border-l-2 border-teal-500 pl-4 py-1">
+                  <div key={mat._id} className="border-l-2 border-teal-500 pl-3 py-1">
                     <button 
                       onClick={() => setViewingMaterial(mat)}
-                      className="text-sm font-medium text-content truncate hover:underline text-left block"
+                      className="text-xs font-semibold text-content truncate hover:underline text-left block"
                     >
                       {mat.title}
                     </button>
-                    <p className="text-xs text-muted">{mat.classId?.name} • {mat.teacher?.name}</p>
-                    {mat.description && <p className="text-sm text-muted mt-1 truncate">{mat.description}</p>}
+                    {mat.description && <p className="text-xs text-muted mt-0.5 truncate">{mat.description}</p>}
                     <p className="text-[10px] text-muted opacity-70 mt-1">{new Date(mat.createdAt).toLocaleDateString()}</p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-muted text-sm py-4">No recent materials in your classes.</p>
+              <p className="text-muted text-xs text-center py-6">No study materials shared yet.</p>
+            )}
+          </div>
+
+          {/* My Leave Applications & Review Status */}
+          <div className="card-surface p-6 rounded-xl border border-border col-span-1 lg:col-span-2">
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+              <h3 className="text-sm font-semibold text-content flex items-center gap-2">
+                <Calendar size={16} className="text-amber-500" />
+                Leave Applications & Approvals ({(dashboardData.leaves || []).length})
+              </h3>
+              <button
+                onClick={() => setShowLeaveModal(true)}
+                className="btn-secondary text-xs py-1 px-2.5"
+              >
+                + New Application
+              </button>
+            </div>
+            {(dashboardData.leaves && dashboardData.leaves.length > 0) ? (
+              <div className="space-y-3">
+                {dashboardData.leaves.map(l => (
+                  <div key={l._id} className="p-3 bg-base rounded-lg border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-content">{l.classId?.name || 'Course'}</span>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${
+                          l.status === 'approved' 
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' 
+                            : l.status === 'rejected'
+                            ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-800'
+                            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                        }`}>
+                          {l.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted">
+                        Dates: {new Date(l.startDate).toLocaleDateString()} - {new Date(l.endDate).toLocaleDateString()}
+                      </p>
+                      <p className="text-xs text-content italic">"{l.reason}"</p>
+                      {(l.teacherComment || l.reviewNote) && (
+                        <p className="text-xs text-primary-600 dark:text-primary-400 bg-primary-50/50 dark:bg-primary-950/20 p-2 rounded mt-1">
+                          <span className="font-semibold">Faculty Note:</span> {l.teacherComment || l.reviewNote}
+                        </p>
+                      )}
+                    </div>
+                    {l.status === 'pending' && (
+                      <button
+                        onClick={() => handleCancelLeave(l._id)}
+                        className="btn-secondary text-xs py-1 px-3 text-red-600 hover:text-red-700 self-start sm:self-center"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted text-xs text-center py-6">No leave applications submitted yet.</p>
             )}
           </div>
         </div>
@@ -359,32 +416,32 @@ const StudentDashboard = () => {
       {/* Join Class Modal */}
       {showJoinModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card-surface w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-border">
-              <h3 className="text-lg font-medium text-content">Join Class</h3>
-              <p className="text-xs text-muted mt-1">Enter the 6-character code from your teacher.</p>
+          <div className="card-surface w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 rounded-xl border border-border shadow-xl">
+            <div className="px-6 py-4 border-b border-border bg-base">
+              <h3 className="text-base font-semibold text-content">Enroll in Course</h3>
+              <p className="text-xs text-muted mt-0.5">Enter the course enrollment code given by your instructor</p>
             </div>
             <form onSubmit={handleJoinClass}>
-              <div className="px-6 py-4 space-y-4">
-                {error && <div className="text-red-600 text-sm bg-red-50 dark:bg-red-950/40 p-3 rounded-md border border-red-200 dark:border-red-800">{error}</div>}
+              <div className="p-6 space-y-4">
+                {error && <div className="text-red-600 text-xs bg-red-50 dark:bg-red-950/40 p-3 rounded-md border border-red-200 dark:border-red-800">{error}</div>}
                 
                 <div>
-                  <label className="block text-xs font-medium text-muted mb-1">Class Code</label>
+                  <label className="block text-xs font-medium text-content mb-1">Enrollment Code</label>
                   <input 
                     required 
                     type="text" 
                     value={classCode} 
                     onChange={e => setClassCode(e.target.value)} 
                     className="input-field uppercase font-mono tracking-wider text-center text-lg" 
-                    placeholder="e.g. 7A8B9C"
-                    maxLength={10}
+                    placeholder="e.g. CS101-AI"
+                    maxLength={15}
                   />
                 </div>
               </div>
               <div className="px-6 py-4 flex justify-end gap-2 bg-base border-t border-border">
-                <button type="button" onClick={() => setShowJoinModal(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" disabled={!classCode.trim() || isSubmitting} className="btn-primary">
-                  {isSubmitting ? 'Joining...' : 'Join'}
+                <button type="button" onClick={() => setShowJoinModal(false)} className="btn-secondary text-xs">Cancel</button>
+                <button type="submit" disabled={!classCode.trim() || isSubmitting} className="btn-primary text-xs">
+                  {isSubmitting ? 'Verifying...' : 'Enroll'}
                 </button>
               </div>
             </form>
@@ -392,24 +449,24 @@ const StudentDashboard = () => {
         </div>
       )}
 
-      {/* Submit OTP Attendance Modal */}
+      {/* Submit OTP Modal */}
       {showOtpModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card-surface w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-border">
-              <h3 className="text-lg font-medium text-content flex items-center gap-2">
-                <Clock size={20} className="text-primary-600" />
+          <div className="card-surface w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 rounded-xl border border-border shadow-xl">
+            <div className="px-6 py-4 border-b border-border bg-base">
+              <h3 className="text-base font-semibold text-content flex items-center gap-2">
+                <Clock size={18} className="text-primary-600" />
                 Submit Attendance OTP
               </h3>
-              <p className="text-xs text-muted mt-1">Enter the active 6-digit code shared by your teacher.</p>
+              <p className="text-xs text-muted mt-0.5">Enter the 6-digit session code shown on your classroom display</p>
             </div>
             <form onSubmit={handleSubmitOtp}>
-              <div className="px-6 py-4 space-y-4">
+              <div className="p-6 space-y-4">
                 {otpMessage.text && (
-                  <div className={`p-3 rounded-md text-sm border flex items-center gap-2 ${
+                  <div className={`p-3 rounded-md text-xs border flex items-center gap-2 ${
                     otpMessage.isError 
                       ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/40 dark:border-red-800' 
-                      : 'bg-green-50 text-green-600 border-green-200 dark:bg-green-950/40 dark:border-green-800'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800'
                   }`}>
                     {otpMessage.isError ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
                     <span>{otpMessage.text}</span>
@@ -417,11 +474,11 @@ const StudentDashboard = () => {
                 )}
                 
                 <div>
-                  <label className="block text-xs font-medium text-muted mb-1">Select Class</label>
+                  <label className="block text-xs font-medium text-content mb-1">Select Class</label>
                   <select
                     value={selectedClassForOtp}
                     onChange={(e) => setSelectedClassForOtp(e.target.value)}
-                    className="input-field text-sm"
+                    className="input-field text-xs"
                     required
                   >
                     {classes.map(c => (
@@ -431,22 +488,22 @@ const StudentDashboard = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-muted mb-1">6-Digit OTP</label>
+                  <label className="block text-xs font-medium text-content mb-1">6-Digit Code</label>
                   <input
                     required
                     type="text"
                     maxLength={6}
                     value={enteredOtp}
                     onChange={(e) => setEnteredOtp(e.target.value)}
-                    placeholder="123456"
+                    placeholder="482910"
                     className="input-field text-center font-mono text-2xl tracking-widest"
                   />
                 </div>
               </div>
               <div className="px-6 py-4 flex justify-end gap-2 bg-base border-t border-border">
-                <button type="button" onClick={() => setShowOtpModal(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" disabled={enteredOtp.length !== 6 || isSubmitting} className="btn-primary">
-                  {isSubmitting ? 'Verifying...' : 'Submit Attendance'}
+                <button type="button" onClick={() => setShowOtpModal(false)} className="btn-secondary text-xs">Cancel</button>
+                <button type="submit" disabled={enteredOtp.length !== 6 || isSubmitting} className="btn-primary text-xs">
+                  {isSubmitting ? 'Verifying...' : 'Check In'}
                 </button>
               </div>
             </form>
@@ -454,36 +511,36 @@ const StudentDashboard = () => {
         </div>
       )}
 
-      {/* Apply Leave Modal */}
+      {/* Leave Modal */}
       {showLeaveModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card-surface w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-border">
-              <h3 className="text-lg font-medium text-content flex items-center gap-2">
-                <Calendar size={20} className="text-amber-500" />
-                Apply for Leave
+          <div className="card-surface w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 rounded-xl border border-border shadow-xl">
+            <div className="px-6 py-4 border-b border-border bg-base">
+              <h3 className="text-base font-semibold text-content flex items-center gap-2">
+                <Calendar size={18} className="text-amber-500" />
+                Submit Leave Application
               </h3>
-              <p className="text-xs text-muted mt-1">Approved leaves will be excluded from attendance percentage.</p>
+              <p className="text-xs text-muted mt-0.5">Approved leaves are automatically excused from attendance counts</p>
             </div>
             <form onSubmit={handleApplyLeave}>
-              <div className="px-6 py-4 space-y-4">
+              <div className="p-6 space-y-4">
                 {leaveMessage.text && (
-                  <div className={`p-3 rounded-md text-sm border flex items-center gap-2 ${
+                  <div className={`p-3 rounded-md text-xs border flex items-center gap-2 ${
                     leaveMessage.isError 
                       ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/40 dark:border-red-800' 
-                      : 'bg-green-50 text-green-600 border-green-200 dark:bg-green-950/40 dark:border-green-800'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800'
                   }`}>
                     {leaveMessage.isError ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
                     <span>{leaveMessage.text}</span>
                   </div>
                 )}
-
+                
                 <div>
-                  <label className="block text-xs font-medium text-muted mb-1">Class</label>
+                  <label className="block text-xs font-medium text-content mb-1">Class</label>
                   <select
                     value={leaveForm.classId}
                     onChange={(e) => setLeaveForm({ ...leaveForm, classId: e.target.value })}
-                    className="input-field text-sm"
+                    className="input-field text-xs"
                     required
                   >
                     {classes.map(c => (
@@ -494,43 +551,43 @@ const StudentDashboard = () => {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-muted mb-1">Start Date</label>
+                    <label className="block text-xs font-medium text-content mb-1">Start Date</label>
                     <input
-                      required
                       type="date"
+                      required
                       value={leaveForm.startDate}
                       onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })}
-                      className="input-field text-sm"
+                      className="input-field text-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-muted mb-1">End Date</label>
+                    <label className="block text-xs font-medium text-content mb-1">End Date</label>
                     <input
-                      required
                       type="date"
+                      required
                       value={leaveForm.endDate}
                       onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })}
-                      className="input-field text-sm"
+                      className="input-field text-xs"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-muted mb-1">Reason for Leave</label>
+                  <label className="block text-xs font-medium text-content mb-1">Reason for Absence</label>
                   <textarea
                     required
                     rows={3}
                     value={leaveForm.reason}
                     onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
-                    className="input-field text-sm"
-                    placeholder="e.g. Medical emergency, attending academic conference..."
-                  />
+                    placeholder="Provide justification for academic leave..."
+                    className="input-field text-xs resize-none"
+                  ></textarea>
                 </div>
               </div>
               <div className="px-6 py-4 flex justify-end gap-2 bg-base border-t border-border">
-                <button type="button" onClick={() => setShowLeaveModal(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="btn-primary">
-                  {isSubmitting ? 'Submitting...' : 'Submit Application'}
+                <button type="button" onClick={() => setShowLeaveModal(false)} className="btn-secondary text-xs">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="btn-primary text-xs">
+                  {isSubmitting ? 'Submitting...' : 'Submit Request'}
                 </button>
               </div>
             </form>

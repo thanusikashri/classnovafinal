@@ -100,6 +100,48 @@ const Login = () => {
               </button>
             </div>
           </form>
+
+          {/* Test Accounts Selection */}
+          <div className="mt-8 pt-6 border-t border-border">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted text-center mb-3">
+              Quick Sign-In Test Accounts
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('student@demo.classnova.local');
+                  setPassword('demo123');
+                }}
+                className="px-2 py-2 text-xs rounded border border-border hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-content text-center transition-colors"
+              >
+                <div className="font-medium">Student</div>
+                <div className="text-[10px] text-muted truncate">Alex Johnson</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('teacher@demo.classnova.local');
+                  setPassword('demo123');
+                }}
+                className="px-2 py-2 text-xs rounded border border-border hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-content text-center transition-colors"
+              >
+                <div className="font-medium">Professor</div>
+                <div className="text-[10px] text-muted truncate">Dr. Williams</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('admin@demo.classnova.local');
+                  setPassword('demo123');
+                }}
+                className="px-2 py-2 text-xs rounded border border-border hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-content text-center transition-colors"
+              >
+                <div className="font-medium">Administrator</div>
+                <div className="text-[10px] text-muted truncate">System</div>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

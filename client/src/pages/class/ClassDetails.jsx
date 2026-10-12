@@ -177,12 +177,16 @@ const ClassDetails = () => {
     if (!newAnnouncement.trim()) return;
     setIsSubmitting(true);
     try {
-      await api.post(`/classes/${id}/announcements`, { content: newAnnouncement });
+      await api.post(`/classes/${id}/announcements`, { 
+        content: newAnnouncement.trim(),
+        title: newAnnouncement.trim().substring(0, 60)
+      });
       setNewAnnouncement('');
       fetchAnnouncements();
     } catch (err) {
       console.error(err);
-      alert('Error posting announcement');
+      const errMsg = err.response?.data?.message || 'Failed to post announcement. Please check permissions.';
+      alert(errMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -190,19 +194,29 @@ const ClassDetails = () => {
 
   const handleCreateAssignment = async (e) => {
     e.preventDefault();
-    if (!newAssign.title.trim() || !newAssign.description.trim()) return;
+    if (!newAssign.title.trim()) {
+      alert('Please enter an assignment title');
+      return;
+    }
     setIsAssigning(true);
     try {
-      const payload = { ...newAssign };
-      if (!payload.dueDate) delete payload.dueDate; // if empty string
+      const payload = { 
+        title: newAssign.title.trim(),
+        description: newAssign.description.trim() || 'Please complete the instructions assigned for this task.',
+        maxMarks: Number(newAssign.maxMarks) || 100
+      };
+      if (newAssign.dueDate) {
+        payload.dueDate = new Date(newAssign.dueDate).toISOString();
+      }
       await api.post(`/classes/${id}/assignments`, payload);
       setShowAssignModal(false);
       setNewAssign({ title: '', description: '', dueDate: '', maxMarks: 100 });
-      fetchAssignments();
+      await fetchAssignments();
       setActiveTab('classwork');
     } catch (err) {
       console.error(err);
-      alert('Error creating assignment');
+      const errMsg = err.response?.data?.message || 'Failed to create assignment. Please check permissions.';
+      alert(errMsg);
     } finally {
       setIsAssigning(false);
     }

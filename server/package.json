@@ -5,7 +5,9 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "dev:demo": "nodemon --require dotenv/config src/server.js",
+    "start:demo": "node --require dotenv/config src/server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

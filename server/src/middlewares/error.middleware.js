@@ -22,6 +22,12 @@ const errorHandler = (err, req, res, next) => {
     error = { message, statusCode: 400 };
   }
 
+  // Mongoose server selection or connection buffering timeout
+  if (err.name === 'MongooseServerSelectionError' || err.name === 'MongooseError' && err.message && err.message.includes('buffering timed out')) {
+    const message = 'Database service is currently unavailable. Please verify MongoDB Atlas connection and IP whitelist.';
+    error = { message, statusCode: 503 };
+  }
+
   res.status(error.statusCode || 500).json({
     success: false,
     message: error.message || 'Server Error',

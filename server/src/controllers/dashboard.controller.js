@@ -32,14 +32,16 @@ exports.getStudentDashboard = async (req, res, next) => {
     // Real Attendance percentage
     const attendancePercentage = await calculateOverallStudentAttendance(classIds, req.user.id);
 
-    // Recent / Pending Leave applications for this student
-    const pendingLeaves = await LeaveApplication.find({
-      student: req.user.id,
-      status: 'pending'
+    // Recent Leave applications for this student (all statuses: pending, approved, rejected)
+    const leaves = await LeaveApplication.find({
+      student: req.user.id
     })
     .populate('classId', 'name')
+    .populate('reviewedBy', 'name')
     .sort('-createdAt')
-    .limit(5);
+    .limit(10);
+
+    const pendingLeaves = leaves.filter(l => l.status === 'pending');
 
     // Upcoming assessments via adapter
     const upcomingAssessments = await assessmentAdapter.getStudentUpcomingAssessments(classIds, req.user.id);
@@ -50,6 +52,7 @@ exports.getStudentDashboard = async (req, res, next) => {
         classes,
         announcements,
         attendance: attendancePercentage,
+        leaves: leaves || [],
         pendingLeaves: pendingLeaves || [],
         recentMaterials: recentMaterials || [],
         upcomingAssessments: upcomingAssessments.items || []
@@ -119,11 +122,17 @@ exports.getTeacherDashboard = async (req, res, next) => {
       });
     }
 
+    const upcomingAssignments = await Assignment.find({ classId: { $in: classIds } })
+      .populate('classId', 'name')
+      .sort('dueDate')
+      .limit(10);
+
     res.status(200).json({
       success: true,
       data: {
         classes,
         announcements,
+        upcomingAssignments,
         todaysAttendance: todaysAttendanceList,
         pendingLeaves: pendingLeaves || [],
         recentMaterials: recentMaterials || []
