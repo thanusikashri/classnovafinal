@@ -94,7 +94,7 @@ const QuizTake = () => {
     setAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
   };
 
-  if (loading || !quiz || !attempt) return <div className="flex justify-center py-20 text-gray-500">Loading...</div>;
+  if (loading || !quiz || !attempt) return <div className="flex justify-center py-20 text-muted">Loading...</div>;
 
   const formatTime = (seconds) => {
     if (seconds === null) return '--:--';
@@ -104,11 +104,11 @@ const QuizTake = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans pb-24">
+    <div className="min-h-screen bg-base font-sans pb-24 transition-colors duration-300">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-300 shadow-sm px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-medium text-gray-800 truncate pr-4">{quiz.title}</h1>
-        <div className={`flex items-center gap-2 font-mono text-lg font-bold ${timeLeft < 60 ? 'text-red-600' : 'text-gray-700'}`}>
+      <div className="sticky top-0 z-50 bg-surface border-b border-border shadow-sm px-6 py-4 flex items-center justify-between">
+        <h1 className="text-xl font-medium text-content truncate pr-4">{quiz.title}</h1>
+        <div className={`flex items-center gap-2 font-mono text-lg font-bold ${timeLeft < 60 ? 'text-red-500' : 'text-content'}`}>
           <Clock size={20} />
           {formatTime(timeLeft)}
         </div>
@@ -116,13 +116,13 @@ const QuizTake = () => {
 
       <div className="max-w-3xl mx-auto pt-8 px-4 space-y-8">
         {quiz.questions.map((q, qIndex) => (
-          <div key={q._id} className="bg-white p-6 sm:p-8 rounded-lg shadow-sm border border-gray-300">
+          <div key={q._id} className="card-surface p-6 sm:p-8">
             <div className="flex justify-between items-start mb-6 gap-4">
-              <h3 className="text-lg font-medium text-gray-800">
-                <span className="text-gray-500 mr-2">{qIndex + 1}.</span>
+              <h3 className="text-lg font-medium text-content">
+                <span className="text-muted mr-2">{qIndex + 1}.</span>
                 {q.text}
               </h3>
-              <span className="text-sm font-medium text-gray-500 whitespace-nowrap bg-gray-100 px-3 py-1 rounded-full">{q.marks} pts</span>
+              <span className="text-sm font-medium text-muted whitespace-nowrap bg-base px-3 py-1 rounded-full border border-border">{q.marks} pts</span>
             </div>
 
             <div className="space-y-3">
@@ -132,7 +132,7 @@ const QuizTake = () => {
                   <label 
                     key={oIndex} 
                     className={`flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                      isSelected ? 'border-primary-600 bg-primary-50' : 'border-gray-200 hover:bg-gray-50'
+                      isSelected ? 'border-secondary-500 bg-secondary-50 dark:bg-secondary-900/20' : 'border-border hover:bg-surface'
                     }`}
                   >
                     <input 
@@ -144,11 +144,11 @@ const QuizTake = () => {
                       className="sr-only" 
                     />
                     <div className="pt-0.5">
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? 'border-primary-600 bg-primary-600' : 'border-gray-400'}`}>
-                        {isSelected && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? 'border-secondary-600 bg-secondary-600 dark:border-secondary-500 dark:bg-secondary-500' : 'border-muted'}`}>
+                        {isSelected && <div className="w-2 h-2 rounded-full bg-base"></div>}
                       </div>
                     </div>
-                    <span className={`text-base ${isSelected ? 'text-primary-900 font-medium' : 'text-gray-700'}`}>{opt}</span>
+                    <span className={`text-base ${isSelected ? 'text-secondary-900 dark:text-secondary-300 font-medium' : 'text-content'}`}>{opt}</span>
                   </label>
                 );
               })}
@@ -158,8 +158,8 @@ const QuizTake = () => {
       </div>
 
       {/* Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 p-4 flex justify-between items-center z-50">
-        <div className="text-sm text-gray-600 font-medium">
+      <div className="fixed bottom-0 left-0 right-0 bg-surface border-t border-border p-4 flex justify-between items-center z-50">
+        <div className="text-sm text-muted font-medium">
           Answered: {Object.keys(answers).length} / {quiz.questions.length}
         </div>
         <button 
@@ -169,7 +169,7 @@ const QuizTake = () => {
             }
           }}
           disabled={isSubmitting}
-          className="flex items-center gap-2 bg-primary-600 text-white px-8 py-3 rounded-md font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors shadow-sm"
+          className="flex items-center gap-2 bg-secondary-600 text-white px-8 py-3 rounded-md font-medium hover:bg-secondary-700 disabled:opacity-50 transition-colors shadow-sm"
         >
           <CheckCircle size={20} />
           {isSubmitting ? 'Submitting...' : 'Submit Quiz'}

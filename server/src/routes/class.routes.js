@@ -4,6 +4,7 @@ const { getAnnouncements, createAnnouncement } = require('../controllers/announc
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const assignmentRouter = require('./assignment.routes');
 const quizRouter = require('./quiz.routes');
+const materialRouter = require('./material.routes');
 
 const router = express.Router();
 
@@ -20,5 +21,6 @@ router.post('/:classId/announcements', authorize('teacher', 'admin'), createAnno
 // Re-route into other resource routers
 router.use('/:classId/assignments', assignmentRouter);
 router.use('/:classId/quizzes', quizRouter);
+router.use('/:classId/materials', materialRouter);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 const Assignment = require('../models/Assignment');
 const Class = require('../models/Class');
+const Notification = require('../models/Notification');
 
 // @desc    Get assignments for a class
 // @route   GET /api/classes/:classId/assignments
@@ -51,6 +52,18 @@ exports.createAssignment = async (req, res, next) => {
     req.body.teacher = req.user.id;
 
     const assignment = await Assignment.create(req.body);
+
+    // Create notifications for all students in the class
+    if (cls.students && cls.students.length > 0) {
+      const notifications = cls.students.map(studentId => ({
+        recipient: studentId,
+        title: `New Assignment in ${cls.name}`,
+        message: `Assignment: ${assignment.title}`,
+        type: 'assignment',
+        link: `/classes/${cls._id}/assignments/${assignment._id}`
+      }));
+      await Notification.insertMany(notifications);
+    }
 
     res.status(201).json({
       success: true,

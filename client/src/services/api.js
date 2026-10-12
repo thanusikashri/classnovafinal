@@ -9,11 +9,8 @@ api.interceptors.request.use(
   async config => {
     const token = localStorage.getItem('token');
     if (token) {
-      config.headers = { 
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
+      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers['Accept'] = 'application/json';
     }
     return config;
   },

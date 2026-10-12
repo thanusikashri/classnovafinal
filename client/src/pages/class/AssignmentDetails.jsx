@@ -108,7 +108,7 @@ const AssignmentDetails = () => {
   };
 
   if (loading || !assignment) {
-    return <div className="flex justify-center py-20 text-gray-500">Loading...</div>;
+    return <div className="flex justify-center py-20 text-muted">Loading...</div>;
   }
 
   const isTeacher = user.role === 'admin' || assignment.teacher._id === user._id;
@@ -125,23 +125,23 @@ const AssignmentDetails = () => {
 
       <div className="flex flex-col md:flex-row gap-6 items-start">
         {/* Main Assignment Info */}
-        <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-300 p-6 sm:p-8">
-          <div className="flex items-center gap-4 border-b border-primary-600 pb-4 mb-6">
-            <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center text-primary-700">
+        <div className="flex-1 card-surface p-6 sm:p-8">
+          <div className="flex items-center gap-4 border-b border-primary-600 dark:border-primary-500 pb-4 mb-6">
+            <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-400">
               <ClipboardList size={24} />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-medium text-gray-800">{assignment.title}</h1>
-              <p className="text-gray-500 mt-1">
+              <h1 className="text-2xl sm:text-3xl font-medium text-content">{assignment.title}</h1>
+              <p className="text-muted mt-1">
                 {assignment.teacher?.name} • {new Date(assignment.createdAt).toLocaleDateString()}
               </p>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between text-sm font-medium text-gray-600 mb-6 bg-gray-50 p-4 rounded-md">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between text-sm font-medium text-muted mb-6 bg-surface p-4 rounded-md border border-border">
             <div>
               {assignment.dueDate ? (
-                <span className={new Date(assignment.dueDate) < new Date() ? 'text-red-600' : ''}>
+                <span className={new Date(assignment.dueDate) < new Date() ? 'text-red-500' : ''}>
                   Due {new Date(assignment.dueDate).toLocaleString()}
                 </span>
               ) : (
@@ -151,7 +151,7 @@ const AssignmentDetails = () => {
             <div>{assignment.maxMarks} points</div>
           </div>
 
-          <div className="prose max-w-none text-gray-800 whitespace-pre-wrap">
+          <div className="prose max-w-none text-content whitespace-pre-wrap">
             {assignment.description}
           </div>
         </div>
@@ -159,23 +159,23 @@ const AssignmentDetails = () => {
         {/* Sidebar / Interaction Panel */}
         <div className="w-full md:w-80 space-y-6">
           {!isTeacher && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-300 p-6">
+            <div className="card-surface p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium text-gray-800">Your work</h2>
-                <span className={`text-sm font-medium ${mySubmission?.status === 'Graded' ? 'text-green-600' : mySubmission?.status === 'Submitted' ? 'text-blue-600' : 'text-gray-500'}`}>
+                <h2 className="text-lg font-medium text-content">Your work</h2>
+                <span className={`text-sm font-medium ${mySubmission?.status === 'Graded' ? 'text-green-600 dark:text-green-400' : mySubmission?.status === 'Submitted' ? 'text-blue-600 dark:text-blue-400' : 'text-muted'}`}>
                   {mySubmission ? mySubmission.status : 'Assigned'}
                 </span>
               </div>
               
               {mySubmission?.status === 'Graded' && (
-                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
-                  <div className="flex items-center gap-2 text-green-800 font-medium mb-1">
+                <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-md">
+                  <div className="flex items-center gap-2 text-green-800 dark:text-green-400 font-medium mb-1">
                     <CheckCircle size={18} />
                     <span>Graded</span>
                   </div>
-                  <div className="text-2xl font-bold text-gray-900 mb-2">{mySubmission.marks} / {assignment.maxMarks}</div>
+                  <div className="text-2xl font-bold text-content mb-2">{mySubmission.marks} / {assignment.maxMarks}</div>
                   {mySubmission.feedback && (
-                    <div className="text-sm text-gray-700 mt-2 border-t border-green-200 pt-2">
+                    <div className="text-sm text-content mt-2 border-t border-green-200 dark:border-green-800/50 pt-2">
                       <span className="font-medium">Feedback: </span>{mySubmission.feedback}
                     </div>
                   )}
@@ -183,11 +183,11 @@ const AssignmentDetails = () => {
               )}
 
               <form onSubmit={handleSubmitWork}>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Text submission</label>
+                <label className="block text-sm font-medium text-content mb-2">Text submission</label>
                 <textarea
                   value={content}
                   onChange={e => setContent(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[120px] mb-4 text-sm"
+                  className="input-field min-h-[120px] mb-4 text-sm"
                   placeholder="Type your answer here..."
                   disabled={mySubmission?.status === 'Graded'}
                   required
@@ -197,7 +197,7 @@ const AssignmentDetails = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting || !content.trim()}
-                    className="w-full py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+                    className="w-full btn-primary"
                   >
                     {isSubmitting ? 'Submitting...' : (mySubmission ? 'Resubmit' : 'Turn in')}
                   </button>
@@ -207,23 +207,23 @@ const AssignmentDetails = () => {
           )}
 
           {isTeacher && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-300 overflow-hidden">
-              <div className="p-4 border-b border-gray-200 bg-gray-50">
-                <h2 className="text-lg font-medium text-gray-800">Student Submissions</h2>
-                <div className="text-sm text-gray-500 mt-1">{submissions.length} submitted</div>
+            <div className="card-surface overflow-hidden">
+              <div className="p-4 border-b border-border bg-base">
+                <h2 className="text-lg font-medium text-content">Student Submissions</h2>
+                <div className="text-sm text-muted mt-1">{submissions.length} submitted</div>
               </div>
               
-              <div className="divide-y divide-gray-200 max-h-[500px] overflow-y-auto">
+              <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
                 {submissions.map(sub => (
-                  <div key={sub._id} className="p-4 hover:bg-gray-50 transition-colors">
+                  <div key={sub._id} className="p-4 hover:bg-surface transition-colors">
                     <div className="flex justify-between items-start mb-2">
-                      <div className="font-medium text-gray-900">{sub.student?.name || 'Unknown'}</div>
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${sub.status === 'Graded' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                      <div className="font-medium text-content">{sub.student?.name || 'Unknown'}</div>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${sub.status === 'Graded' ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400'}`}>
                         {sub.status}
                       </span>
                     </div>
                     {sub.status === 'Graded' && (
-                      <div className="text-sm font-medium text-gray-700 mb-2">Marks: {sub.marks} / {assignment.maxMarks}</div>
+                      <div className="text-sm font-medium text-muted mb-2">Marks: {sub.marks} / {assignment.maxMarks}</div>
                     )}
                     <button
                       onClick={() => {
@@ -239,7 +239,7 @@ const AssignmentDetails = () => {
                   </div>
                 ))}
                 {submissions.length === 0 && (
-                  <div className="p-6 text-center text-gray-500 text-sm">
+                  <div className="p-6 text-center text-muted text-sm">
                     No submissions yet.
                   </div>
                 )}
@@ -252,26 +252,26 @@ const AssignmentDetails = () => {
       {/* Grading Modal */}
       {gradingSubmission && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-              <h3 className="text-lg font-medium text-gray-800">Grading: {gradingSubmission.student?.name}</h3>
-              <button onClick={() => setGradingSubmission(null)} className="text-gray-500 hover:text-gray-700">✕</button>
+          <div className="card-surface w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-base">
+              <h3 className="text-lg font-medium text-content">Grading: {gradingSubmission.student?.name}</h3>
+              <button onClick={() => setGradingSubmission(null)} className="text-muted hover:text-content">✕</button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-6">
               <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-500 mb-2 uppercase tracking-wider">Submission content</h4>
-                <div className="bg-gray-50 p-4 rounded-md border border-gray-200 whitespace-pre-wrap text-gray-800 min-h-[100px]">
+                <h4 className="text-sm font-medium text-muted mb-2 uppercase tracking-wider">Submission content</h4>
+                <div className="bg-surface p-4 rounded-md border border-border whitespace-pre-wrap text-content min-h-[100px]">
                   {gradingSubmission.content}
                 </div>
-                <div className="text-xs text-gray-400 mt-2">
+                <div className="text-xs text-muted mt-2">
                   Submitted at: {new Date(gradingSubmission.createdAt).toLocaleString()}
                 </div>
               </div>
 
               <form id="grading-form" onSubmit={handleGrade} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-content mb-1">
                     Marks (out of {assignment.maxMarks})
                   </label>
                   <input
@@ -280,27 +280,27 @@ const AssignmentDetails = () => {
                     max={assignment.maxMarks}
                     value={marks}
                     onChange={e => setMarks(e.target.value)}
-                    className="w-32 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="input-field w-32"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Feedback (optional)</label>
+                  <label className="block text-sm font-medium text-content mb-1">Feedback (optional)</label>
                   <textarea
                     value={feedback}
                     onChange={e => setFeedback(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[80px]"
+                    className="input-field min-h-[80px]"
                     placeholder="Provide constructive feedback..."
                   />
                 </div>
               </form>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
+            <div className="px-6 py-4 border-t border-border bg-base flex justify-end gap-2">
               <button 
                 type="button" 
                 onClick={() => setGradingSubmission(null)} 
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                className="btn-secondary"
               >
                 Cancel
               </button>
@@ -308,7 +308,7 @@ const AssignmentDetails = () => {
                 type="submit" 
                 form="grading-form"
                 disabled={isGrading || marks === ''} 
-                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 transition-colors"
+                className="btn-primary"
               >
                 {isGrading ? 'Saving...' : 'Return Grade'}
               </button>

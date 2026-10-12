@@ -9,6 +9,7 @@ import Profile from './pages/profile/Profile';
 import AdminUsers from './pages/admin/AdminUsers';
 import TeacherDashboard from './pages/dashboard/TeacherDashboard';
 import StudentDashboard from './pages/dashboard/StudentDashboard';
+import AdminDashboard from './pages/dashboard/AdminDashboard';
 import ClassDetails from './pages/class/ClassDetails';
 import AssignmentDetails from './pages/class/AssignmentDetails';
 import QuizBuilder from './pages/class/QuizBuilder';
@@ -42,7 +43,7 @@ const App = () => {
               <Route index element={<DashboardRedirect />} />
               <Route path="student-dashboard" element={<ProtectedRoute roles={['student']}><StudentDashboard /></ProtectedRoute>} />
               <Route path="teacher-dashboard" element={<ProtectedRoute roles={['teacher']}><TeacherDashboard /></ProtectedRoute>} />
-              <Route path="admin-dashboard" element={<ProtectedRoute roles={['admin']}><div>Admin Dashboard</div></ProtectedRoute>} />
+              <Route path="admin-dashboard" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
               <Route path="admin/users" element={<ProtectedRoute roles={['admin']}><AdminUsers /></ProtectedRoute>} />
               <Route path="profile" element={<Profile />} />
               <Route path="classes/:id" element={<ClassDetails />} />

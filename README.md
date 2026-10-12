@@ -700,16 +700,13 @@ real student records.
 
 ## Implementation Roadmap
 
--   [ ] Phase 1: Repository setup, authentication, and roles.
--   [ ] Phase 2: User profiles, classes, enrollment, and class stream.
--   [ ] Phase 3: OTP attendance, leave applications, and study
-    materials.
--   [ ] Phase 4: Quiz creation, timed attempts, evaluation, and results.
--   [ ] Phase 5: Dashboards, notifications, reporting, and performance
-    analytics.
--   [ ] Phase 6: AI quiz generation and teacher review.
--   [ ] Phase 7: Integration tests, security review, documentation, and
-    deployment.
+-   [x] Phase 1: Repository setup, authentication, and roles. (Member 1 - Completed)
+-   [x] Phase 2: User profiles, classes, enrollment, and class stream. (Member 1 - Completed)
+-   [x] Phase 3: OTP attendance, leave applications, and study materials with Cloudinary. (Member 1 - Completed)
+-   [ ] Phase 4: Quiz creation, timed attempts, evaluation, and results. (Member 2 - Assessment Module)
+-   [x] Phase 5: Dashboards, in-app notifications, and platform statistics. (Member 1 - Completed)
+-   [ ] Phase 6: AI quiz generation and teacher review. (Member 2 - Assessment Module)
+-   [x] Phase 7: Member 1 integration tests, security review, and API documentation. (Member 1 - Completed)
 
 ## Troubleshooting
 
