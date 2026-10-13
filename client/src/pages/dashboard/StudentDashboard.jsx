@@ -64,6 +64,13 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     fetchDashboard();
+    const handleFocus = () => fetchDashboard();
+    window.addEventListener('focus', handleFocus);
+    const interval = setInterval(fetchDashboard, 15000);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
   }, [fetchDashboard]);
 
   const handleJoinClass = async (e) => {
@@ -117,6 +124,11 @@ const StudentDashboard = () => {
 
   const handleApplyLeave = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    if (new Date(leaveForm.startDate) > new Date(leaveForm.endDate)) {
+      setLeaveMessage({ text: 'Start date cannot be after end date', isError: true });
+      return;
+    }
     setLeaveMessage({ text: '', isError: false });
     setIsSubmitting(true);
     try {
@@ -127,7 +139,7 @@ const StudentDashboard = () => {
         setShowLeaveModal(false);
         setLeaveMessage({ text: '', isError: false });
         fetchDashboard();
-      }, 1500);
+      }, 1200);
     } catch (err) {
       setLeaveMessage({ text: err.response?.data?.message || 'Failed to apply for leave', isError: true });
     } finally {
@@ -220,15 +232,27 @@ const StudentDashboard = () => {
                 </div>
                 
                 <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div className="text-xs text-muted flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-medium shrink-0">
-                      {cls.teacher?.name ? cls.teacher.name.charAt(0).toUpperCase() : 'T'}
+                  <div>
+                    <div className="text-xs text-muted flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <div className="w-5 h-5 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-medium shrink-0 text-[10px]">
+                          {cls.teacher?.name ? cls.teacher.name.charAt(0).toUpperCase() : 'T'}
+                        </div>
+                        <span className="truncate">{cls.teacher?.name || 'Instructor'}</span>
+                      </div>
+                      {cls.isEnrolled && (
+                        <span className="badge-status badge-status-approved text-[10px]">
+                          Enrolled
+                        </span>
+                      )}
                     </div>
-                    <span className="truncate">{cls.teacher?.name || 'Instructor'}</span>
+                    <div className="text-xs text-muted font-medium">
+                      {(cls.quizCount ?? 0)} Quizzes • {(cls.assignmentCount ?? 0)} Assignments
+                    </div>
                   </div>
 
-                  <div className="text-xs text-muted flex justify-between items-center border-t border-border pt-3">
-                    <span className="font-mono text-[11px] bg-base px-2 py-0.5 rounded border border-border">
+                  <div className="text-xs text-muted flex justify-between items-center border-t border-[#E2E8F0] dark:border-slate-700 pt-3">
+                    <span className="badge-course-code">
                       {cls.code || cls.classCode || 'OPEN'}
                     </span>
                     <Link to={`/classes/${cls._id}`} className="text-primary-600 hover:underline flex items-center gap-1 font-medium">
@@ -295,15 +319,21 @@ const StudentDashboard = () => {
                 {dashboardData.upcomingAssessments.map(item => (
                   <div key={item._id} className="p-3 bg-base rounded-lg border border-border flex items-center justify-between">
                     <div>
-                      <Link to={`/classes/${item.classId}/assignments/${item._id}`} className="text-sm font-medium text-content hover:underline block">
+                      <Link 
+                        to={item.type === 'quiz' ? `/classes/${item.classId}/quizzes/${item._id}/take` : `/classes/${item.classId}/assignments/${item._id}`} 
+                        className="text-sm font-medium text-content hover:underline block"
+                      >
                         {item.title}
                       </Link>
                       <span className="text-xs text-muted">
-                        Due: {new Date(item.dueDate).toLocaleDateString()}
+                        {item.type === 'quiz' ? 'Quiz • ' : 'Assignment • '}Due: {new Date(item.dueDate).toLocaleDateString()}
                       </span>
                     </div>
-                    <Link to={`/classes/${item.classId}`} className="text-xs text-primary-600 hover:underline shrink-0">
-                      View →
+                    <Link 
+                      to={item.type === 'quiz' ? `/classes/${item.classId}/quizzes/${item._id}/take` : `/classes/${item.classId}`} 
+                      className="text-xs text-primary-600 hover:underline shrink-0"
+                    >
+                      {item.type === 'quiz' ? 'Take Quiz →' : 'View →'}
                     </Link>
                   </div>
                 ))}
@@ -322,7 +352,7 @@ const StudentDashboard = () => {
                   <div key={ann._id} className="border-l-2 border-primary-500 pl-3 py-1">
                     <p className="text-xs font-semibold text-content">{ann.classId?.name || 'Class'}</p>
                     <p className="text-xs text-muted mt-0.5 line-clamp-2">{ann.content}</p>
-                    <p className="text-[10px] text-muted opacity-75 mt-1">{new Date(ann.createdAt).toLocaleDateString()}</p>
+                    <p className="text-[10px] text-muted mt-1">{new Date(ann.createdAt).toLocaleDateString()}</p>
                   </div>
                 ))}
               </div>
@@ -345,7 +375,7 @@ const StudentDashboard = () => {
                       {mat.title}
                     </button>
                     {mat.description && <p className="text-xs text-muted mt-0.5 truncate">{mat.description}</p>}
-                    <p className="text-[10px] text-muted opacity-70 mt-1">{new Date(mat.createdAt).toLocaleDateString()}</p>
+                    <p className="text-[10px] text-muted mt-1">{new Date(mat.createdAt).toLocaleDateString()}</p>
                   </div>
                 ))}
               </div>
@@ -361,12 +391,17 @@ const StudentDashboard = () => {
                 <Calendar size={16} className="text-amber-500" />
                 Leave Applications & Approvals ({(dashboardData.leaves || []).length})
               </h3>
-              <button
-                onClick={() => setShowLeaveModal(true)}
-                className="btn-secondary text-xs py-1 px-2.5"
-              >
-                + New Application
-              </button>
+              <div className="flex items-center gap-2">
+                <Link to="/leave-requests" className="text-xs text-primary-600 hover:underline font-medium">
+                  View Full History →
+                </Link>
+                <button
+                  onClick={() => setShowLeaveModal(true)}
+                  className="btn-secondary text-xs py-1 px-2.5"
+                >
+                  + New Application
+                </button>
+              </div>
             </div>
             {(dashboardData.leaves && dashboardData.leaves.length > 0) ? (
               <div className="space-y-3">
@@ -375,13 +410,13 @@ const StudentDashboard = () => {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-content">{l.classId?.name || 'Course'}</span>
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${
+                        <span className={`badge-status ${
                           l.status === 'approved' 
-                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' 
+                            ? 'badge-status-approved' 
                             : l.status === 'rejected'
-                            ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-800'
-                            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
-                        }`}>
+                            ? 'badge-status-rejected'
+                            : 'badge-status-pending'
+                        } capitalize`}>
                           {l.status}
                         </span>
                       </div>
@@ -544,7 +579,9 @@ const StudentDashboard = () => {
                     required
                   >
                     {classes.map(c => (
-                      <option key={c._id} value={c._id}>{c.name}</option>
+                      <option key={c._id} value={c._id}>
+                        {c.name} {c.teacher?.name ? `(Faculty: ${c.teacher.name})` : ''}
+                      </option>
                     ))}
                   </select>
                 </div>

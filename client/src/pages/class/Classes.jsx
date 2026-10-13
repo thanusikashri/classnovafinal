@@ -183,9 +183,14 @@ const Classes = () => {
                   </div>
 
                   <div className="p-6">
-                    <p className="text-sm text-muted line-clamp-2 min-h-[40px]">
+                    <p className="text-sm text-muted line-clamp-2 min-h-[40px] mb-3">
                       {c.description || 'No course overview provided.'}
                     </p>
+                    <div className="text-xs text-muted font-medium flex items-center gap-3">
+                      <span>{(c.quizCount ?? 0)} Quizzes</span>
+                      <span>•</span>
+                      <span>{(c.assignmentCount ?? 0)} Assignments</span>
+                    </div>
                   </div>
                 </div>
 

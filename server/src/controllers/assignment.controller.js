@@ -159,3 +159,61 @@ exports.deleteAssignment = async (req, res, next) => {
     next(err);
   }
 };
+
+// @desc    Get overview of teacher's assignments with submission statistics
+// @route   GET /api/assignments/teacher-overview
+// @access  Private (Teacher, Admin)
+exports.getTeacherAssignmentsOverview = async (req, res, next) => {
+  try {
+    const Submission = require('../models/Submission');
+    const query = req.user.role === 'admin' ? {} : { teacher: req.user.id };
+    const classes = await Class.find(query);
+    const classIds = classes.map(c => c._id);
+
+    const assignments = await Assignment.find({
+      $or: [
+        { classId: { $in: classIds } },
+        ...(req.user.role !== 'admin' ? [{ teacher: req.user.id }] : [])
+      ]
+    }).populate('classId', 'name classCode code students');
+
+    const overview = await Promise.all(assignments.map(async (asgn) => {
+      const cls = asgn.classId;
+      const enrolledCount = (cls && cls.students) ? cls.students.length : 0;
+      const submissions = await Submission.find({ assignmentId: asgn._id });
+
+      const submittedCount = submissions.length;
+      const notSubmittedCount = Math.max(0, enrolledCount - submittedCount);
+      const awaitingReviewCount = submissions.filter(s => s.status === 'Submitted').length;
+      const reviewedCount = submissions.filter(s => s.status === 'Graded' || s.status === 'Reviewed').length;
+      const lateCount = submissions.filter(s => s.isLate).length;
+
+      return {
+        _id: asgn._id,
+        title: asgn.title,
+        description: asgn.description,
+        dueDate: asgn.dueDate,
+        maxMarks: asgn.maxMarks,
+        classId: cls ? cls._id : asgn.classId,
+        courseName: cls ? cls.name : 'Course',
+        courseCode: cls ? (cls.classCode || cls.code) : '',
+        stats: {
+          totalEligibleCount: enrolledCount,
+          submittedCount,
+          notSubmittedCount,
+          awaitingReviewCount,
+          reviewedCount,
+          lateCount
+        }
+      };
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: overview.length,
+      data: overview
+    });
+  } catch (err) {
+    next(err);
+  }
+};

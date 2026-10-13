@@ -77,8 +77,10 @@ const AdminCourses = () => {
                 {filtered.map(cls => (
                   <tr key={cls._id} className="hover:bg-base/40 transition-colors">
                     <td className="px-6 py-4 font-semibold text-content">{cls.name}</td>
-                    <td className="px-6 py-4 font-mono text-xs text-primary-600 dark:text-primary-400 font-bold">
-                      {cls.classCode || cls.code || 'CODE'}
+                    <td className="px-6 py-4">
+                      <span className="badge-course-code">
+                        {cls.classCode || cls.code || 'CODE'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-muted">{cls.teacher?.name || 'Unassigned'}</td>
                     <td className="px-6 py-4 text-muted">{cls.students ? cls.students.length : 0} Students</td>

@@ -15,6 +15,8 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 const adminRoutes = require('./routes/admin.routes');
 const attendanceRoutes = require('./routes/attendance.routes');
 const leaveRoutes = require('./routes/leave.routes');
+const aiRoutes = require('./routes/ai.routes');
+const assignmentRoutes = require('./routes/assignment.routes');
 
 const demoRoutes = require('./routes/demo.routes');
 
@@ -81,6 +83,8 @@ if (env.DEMO_MODE) {
   app.use('/api/admin', adminRoutes);
   app.use('/api/attendance', attendanceRoutes);
   app.use('/api/leaves', leaveRoutes);
+  app.use('/api/ai', aiRoutes);
+  app.use('/api/assignments', assignmentRoutes);
 }
 
 // Error handler middleware

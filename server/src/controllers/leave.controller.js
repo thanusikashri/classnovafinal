@@ -41,11 +41,15 @@ exports.applyForLeave = async (req, res, next) => {
     const leave = await LeaveApplication.create({
       student: req.user.id,
       classId,
+      teacher: cls.teacher,
       startDate: start,
       endDate: end,
       reason: reason.trim(),
       status: 'pending'
     });
+
+    await leave.populate('classId', 'name');
+    await leave.populate('teacher', 'name email');
 
     // Notify the class teacher
     try {
@@ -77,7 +81,8 @@ exports.getMyLeaves = async (req, res, next) => {
   try {
     const leaves = await LeaveApplication.find({ student: req.user.id })
       .populate('classId', 'name')
-      .populate('reviewedBy', 'name')
+      .populate('reviewedBy', 'name email')
+      .populate('teacher', 'name email')
       .sort('-createdAt');
 
     res.status(200).json({
@@ -127,22 +132,27 @@ exports.cancelLeave = async (req, res, next) => {
 // @access  Private (Teacher, Admin)
 exports.getTeacherLeaves = async (req, res, next) => {
   try {
-    let classQuery = {};
+    let filter = {};
     if (req.user.role !== 'admin') {
-      classQuery = { teacher: req.user.id };
+      const classes = await Class.find({ teacher: req.user.id });
+      const classIds = classes.map(c => c._id);
+      filter = {
+        $or: [
+          { classId: { $in: classIds } },
+          { teacher: req.user.id }
+        ]
+      };
     }
 
-    const classes = await Class.find(classQuery);
-    const classIds = classes.map(c => c._id);
-
-    const filter = { classId: { $in: classIds } };
-    if (req.query.status) {
+    if (req.query.status && req.query.status !== 'all') {
       filter.status = req.query.status;
     }
 
     const leaves = await LeaveApplication.find(filter)
-      .populate('student', 'name email')
+      .populate('student', 'name email studentId')
       .populate('classId', 'name')
+      .populate('reviewedBy', 'name email')
+      .populate('teacher', 'name email')
       .sort('-createdAt');
 
     res.status(200).json({
@@ -160,7 +170,8 @@ exports.getTeacherLeaves = async (req, res, next) => {
 // @access  Private (Teacher, Admin)
 exports.reviewLeave = async (req, res, next) => {
   try {
-    const { status, reviewNote } = req.body;
+    const { status, reviewNote, teacherComment } = req.body;
+    const note = (reviewNote || teacherComment || '').trim();
 
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Status must be approved or rejected' });
@@ -176,7 +187,10 @@ exports.reviewLeave = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Class not found' });
     }
 
-    if (req.user.role !== 'admin' && cls.teacher.toString() !== req.user.id) {
+    const classTeacherId = cls.teacher ? cls.teacher.toString() : null;
+    const leaveTeacherId = leave.teacher ? leave.teacher.toString() : null;
+
+    if (req.user.role !== 'admin' && classTeacherId !== req.user.id && leaveTeacherId !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Not authorized to review this leave request' });
     }
 
@@ -186,13 +200,19 @@ exports.reviewLeave = async (req, res, next) => {
     leave.status = status;
     leave.reviewedBy = req.user.id;
     leave.reviewedAt = new Date();
-    if (reviewNote) leave.reviewNote = reviewNote.trim();
+    leave.reviewNote = note;
+    leave.teacherComment = note;
     await leave.save();
+
+    await leave.populate('student', 'name email');
+    await leave.populate('classId', 'name');
+    await leave.populate('reviewedBy', 'name email');
+    await leave.populate('teacher', 'name email');
 
     if (!isSameStatus) {
       try {
         await Notification.create({
-          recipient: leave.student,
+          recipient: leave.student._id || leave.student,
           title: `Leave Application ${status.toUpperCase()}`,
           message: `Your leave application for ${cls.name} has been ${status}.`,
           type: 'leave',

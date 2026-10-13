@@ -38,7 +38,8 @@ exports.getStudentDashboard = async (req, res, next) => {
       student: req.user.id
     })
     .populate('classId', 'name')
-    .populate('reviewedBy', 'name')
+    .populate('reviewedBy', 'name email')
+    .populate('teacher', 'name email')
     .sort('-createdAt')
     .limit(10);
 
@@ -90,14 +91,20 @@ exports.getTeacherDashboard = async (req, res, next) => {
       .limit(5);
 
     // Pending leaves requiring teacher review for their classes
-    const pendingLeaves = await LeaveApplication.find({
-      classId: { $in: classIds },
+    const pendingLeavesFilter = {
+      $or: [
+        { classId: { $in: classIds } },
+        ...(req.user.role !== 'admin' ? [{ teacher: req.user.id }] : [])
+      ],
       status: 'pending'
-    })
-    .populate('student', 'name email')
+    };
+
+    const pendingLeaves = await LeaveApplication.find(pendingLeavesFilter)
+    .populate('student', 'name email studentId')
     .populate('classId', 'name')
+    .populate('teacher', 'name email')
     .sort('-createdAt')
-    .limit(5);
+    .limit(10);
 
     // Today's attendance sessions for teacher's classes
     const startOfToday = new Date();

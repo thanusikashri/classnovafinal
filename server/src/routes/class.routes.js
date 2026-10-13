@@ -1,5 +1,5 @@
 const express = require('express');
-const { getClasses, getClass, createClass, enrollStudent } = require('../controllers/class.controller');
+const { getClasses, getClass, createClass, enrollStudent, enrollStudentById } = require('../controllers/class.controller');
 const { getAnnouncements, createAnnouncement } = require('../controllers/announcement.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const assignmentRouter = require('./assignment.routes');
@@ -13,6 +13,7 @@ router.use(authenticate);
 router.get('/', getClasses);
 router.post('/', authorize('teacher', 'admin'), createClass);
 router.post('/enroll', authorize('student'), enrollStudent);
+router.post('/:id/enroll', authorize('student'), enrollStudentById);
 router.get('/:id', getClass);
 
 router.get('/:classId/announcements', getAnnouncements);

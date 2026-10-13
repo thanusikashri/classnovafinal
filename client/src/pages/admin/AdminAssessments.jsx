@@ -104,10 +104,10 @@ const AdminAssessments = () => {
             <div key={item._id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-base/40 transition-colors">
               <div>
                 <div className="flex items-center gap-2.5 mb-1">
-                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
+                  <span className={`badge-status text-[10px] uppercase font-bold tracking-wider ${
                     item.type === 'quiz'
-                      ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300'
-                      : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                      ? 'badge-status-submitted'
+                      : 'badge-status-available'
                   }`}>
                     {item.type}
                   </span>

@@ -4,13 +4,16 @@ const {
   createAssignment,
   getAssignmentById,
   updateAssignment,
-  deleteAssignment
+  deleteAssignment,
+  getTeacherAssignmentsOverview
 } = require('../controllers/assignment.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router({ mergeParams: true });
 
 router.use(authenticate);
+
+router.get('/teacher-overview', authorize('teacher', 'admin'), getTeacherAssignmentsOverview);
 
 router
   .route('/')

@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { FileText, Plus, Clock, Calendar, CheckCircle2, AlertCircle, ArrowRight, User } from 'lucide-react';
 import api from '../../services/api';
 
 const Assignments = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const queryClassId = searchParams.get('classId');
+
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
   const isStudent = user?.role === 'student';
 
   const [classes, setClasses] = useState([]);
-  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedClass, setSelectedClass] = useState(queryClassId || '');
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,10 +35,23 @@ const Assignments = () => {
 
       if (classList.length > 0) {
         if (isTeacher) {
-          const activeClassId = selectedClass || classList[0]._id;
+          const activeClassId = (queryClassId && classList.some(c => c._id === queryClassId))
+            ? queryClassId
+            : (selectedClass || classList[0]._id);
           setSelectedClass(activeClassId);
-          const asgnRes = await api.get(`/classes/${activeClassId}/assignments`);
-          setAssignments(asgnRes.data.data || []);
+          const [asgnRes, ovRes] = await Promise.all([
+            api.get(`/classes/${activeClassId}/assignments`),
+            api.get('/assignments/teacher-overview').catch(() => ({ data: { data: [] } }))
+          ]);
+          const overviewList = ovRes.data?.data || [];
+          const asgns = (asgnRes.data?.data || []).map(a => {
+            const ovItem = overviewList.find(o => o._id === a._id);
+            return {
+              ...a,
+              stats: ovItem?.stats || a.stats
+            };
+          });
+          setAssignments(asgns);
         } else {
           // For student, fetch all assignments across all enrolled classes
           const promises = classList.map(async (c) => {
@@ -66,8 +82,19 @@ const Assignments = () => {
     setSelectedClass(classId);
     setLoading(true);
     try {
-      const res = await api.get(`/classes/${classId}/assignments`);
-      setAssignments(res.data.data || []);
+      const [res, ovRes] = await Promise.all([
+        api.get(`/classes/${classId}/assignments`),
+        api.get('/assignments/teacher-overview').catch(() => ({ data: { data: [] } }))
+      ]);
+      const overviewList = ovRes.data?.data || [];
+      const asgns = (res.data?.data || []).map(a => {
+        const ovItem = overviewList.find(o => o._id === a._id);
+        return {
+          ...a,
+          stats: ovItem?.stats || a.stats
+        };
+      });
+      setAssignments(asgns);
     } catch (err) {
       console.error(err);
     } finally {
@@ -163,30 +190,55 @@ const Assignments = () => {
             return (
               <div key={asgn._id} className="card-surface rounded-2xl p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
                 <div>
-                  <div className="flex items-center justify-between text-xs text-muted mb-2">
-                    <span className="font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40 px-2.5 py-0.5 rounded-full">
-                      {asgn.maxMarks || 100} Marks
+                  <div className="flex items-center justify-between text-xs mb-3">
+                    <span className="badge-course-code">
+                      {asgn.classInfo?.classCode || asgn.classInfo?.code || `${asgn.maxMarks || 100} Pts`}
                     </span>
-                    <span className="flex items-center gap-1 text-muted">
-                      <Calendar size={13} />
+                    <span className="flex items-center gap-1.5 font-medium text-[#4B5563] dark:text-slate-400 text-xs">
+                      <Calendar size={13} className="text-[#374151] dark:text-slate-400" />
                       Due {dueDateStr}
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-content tracking-tight line-clamp-1 mb-1">{asgn.title}</h3>
-                  {classTitle && <p className="text-xs text-muted mb-3">{classTitle}</p>}
-                  <p className="text-sm text-muted line-clamp-3 mb-4">
+                  <h3 className="text-lg font-bold text-[#111827] dark:text-slate-100 tracking-tight line-clamp-1 mb-1">
+                    {asgn.title}
+                  </h3>
+                  {classTitle && <p className="text-xs text-[#374151] dark:text-slate-400 font-semibold mb-3">{classTitle}</p>}
+                  <p className="text-sm text-[#1F2937] dark:text-slate-300 line-clamp-3 mb-4 leading-relaxed">
                     {asgn.description || 'No description provided.'}
                   </p>
+
+                  {isTeacher && asgn.stats && (
+                    <div className="grid grid-cols-4 gap-1.5 py-2 px-2 bg-base rounded-xl border border-[#E5E7EB] dark:border-slate-700 text-center text-xs mb-3">
+                      <div>
+                        <span className="text-[9px] text-[#4B5563] dark:text-slate-400 block font-semibold uppercase">Eligible</span>
+                        <span className="font-bold text-[#111827] dark:text-slate-100 text-xs">{asgn.stats.totalEligibleCount}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-[#166534] dark:text-emerald-400 block font-semibold uppercase">Done</span>
+                        <span className="font-bold text-[#166534] dark:text-emerald-400 text-xs">{asgn.stats.submittedCount}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-[#854D0E] dark:text-amber-400 block font-semibold uppercase">Pending</span>
+                        <span className="font-bold text-[#854D0E] dark:text-amber-400 text-xs">{asgn.stats.notSubmittedCount}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-[#1D4ED8] dark:text-blue-400 block font-semibold uppercase">Review</span>
+                        <span className="font-bold text-[#1D4ED8] dark:text-blue-400 text-xs">{asgn.stats.awaitingReviewCount}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="pt-4 border-t border-border flex items-center justify-between">
-                  <span className="text-xs text-muted">
-                    {asgn.submissions ? `${asgn.submissions.length} Submissions` : 'Open'}
+                <div className="pt-4 border-t border-[#E5E7EB] dark:border-slate-700 flex items-center justify-between">
+                  <span className="text-xs text-[#374151] dark:text-slate-400 font-medium">
+                    {isTeacher && asgn.stats
+                      ? `${asgn.stats.submittedCount} / ${asgn.stats.totalEligibleCount} submitted`
+                      : (asgn.submissions ? `${asgn.submissions.length} Submissions` : 'Open')}
                   </span>
                   <Link
                     to={`/classes/${classId}/assignments/${asgn._id}`}
-                    className="btn-primary text-xs flex items-center gap-1.5 py-1.5 px-3.5 shadow-xs"
+                    className="btn-primary text-xs flex items-center gap-1.5 py-2 px-4 shadow-xs"
                   >
                     <span>{isTeacher ? 'Review Submissions' : 'View & Submit'}</span>
                     <ArrowRight size={13} />
@@ -206,6 +258,24 @@ const Assignments = () => {
             <p className="text-xs text-muted mb-6">Publish a new assignment for students in this course.</p>
 
             <form onSubmit={handleCreateAssignment} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-content uppercase tracking-wider mb-1">
+                  Target Course
+                </label>
+                <select
+                  value={selectedClass}
+                  onChange={e => setSelectedClass(e.target.value)}
+                  className="input-field text-sm"
+                  required
+                >
+                  {classes.map(c => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-content uppercase tracking-wider mb-1">
                   Assignment Title

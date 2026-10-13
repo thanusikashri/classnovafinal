@@ -44,6 +44,10 @@ const QuizBuilder = () => {
   }, [quizId, fetchQuiz]);
 
   const addQuestion = () => {
+    if (questions.length >= 10) {
+      alert('A quiz cannot contain more than 10 questions (maximum 10 allowed).');
+      return;
+    }
     setQuestions([
       ...questions,
       { text: '', options: ['', ''], correctOptionIndex: 0, marks: 1 }
@@ -90,6 +94,11 @@ const QuizBuilder = () => {
       alert('Please add at least one question');
       return;
     }
+
+    if (questions.length > 10) {
+      alert('A quiz cannot contain more than 10 questions (maximum 10 allowed).');
+      return;
+    }
     
     // Validation
     for (let i = 0; i < questions.length; i++) {
@@ -116,7 +125,7 @@ const QuizBuilder = () => {
       } else {
         await api.post(`/classes/${classId}/quizzes`, payload);
       }
-      navigate(`/classes/${classId}`);
+      navigate(`/classes/${classId}?tab=quizzes`);
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || 'Error saving quiz');

@@ -26,7 +26,8 @@ import {
   Megaphone,
   BarChart3,
   Shield,
-  GraduationCap
+  GraduationCap,
+  UploadCloud
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import api from '../../services/api';
@@ -152,6 +153,7 @@ const MainLayout = () => {
         { name: 'Quiz Generator', path: '/quiz-generator', icon: Sparkles },
         { name: 'Quiz Management', path: '/quiz-management', icon: ClipboardList },
         { name: 'Assignments', path: '/assignments', icon: FileText },
+        { name: 'Assignment Submissions', path: '/teacher/assignment-submissions', icon: UploadCloud },
         { name: 'Leave Requests', path: '/leave-requests', icon: Calendar },
         { name: 'Attendance', path: '/attendance', icon: Clock },
         { name: 'Materials', path: '/materials', icon: FileCheck },
@@ -201,7 +203,7 @@ const MainLayout = () => {
           {/* Mobile hamburger button */}
           <button
             onClick={() => setMobileDrawerOpen(prev => !prev)}
-            className="md:hidden p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-muted transition-colors focus:outline-none"
+            className="md:hidden p-2 rounded-full hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400 text-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             aria-label="Toggle mobile navigation"
           >
             {mobileDrawerOpen ? <X size={22} /> : <Menu size={22} />}
@@ -210,7 +212,7 @@ const MainLayout = () => {
           {/* Desktop collapse / expand button */}
           <button
             onClick={() => setSidebarExpanded(prev => !prev)}
-            className="hidden md:flex p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-muted transition-colors focus:outline-none"
+            className="hidden md:flex p-2 rounded-full hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400 text-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             aria-label={sidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
             title={sidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
           >
@@ -238,7 +240,7 @@ const MainLayout = () => {
           {/* Dark / Light Toggle */}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-full text-muted hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-full text-muted hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500"
             aria-label="Toggle Theme"
           >
             {theme === 'dark' ? <Sun size={19} className="text-amber-400" /> : <Moon size={19} className="text-indigo-600" />}
@@ -248,7 +250,7 @@ const MainLayout = () => {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2 rounded-full text-muted hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative"
+              className="p-2 rounded-full text-muted hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400 transition-colors relative focus-visible:ring-2 focus-visible:ring-blue-500"
               aria-label="Notifications"
             >
               <Bell size={19} />
@@ -288,7 +290,7 @@ const MainLayout = () => {
                       <div
                         key={notif._id}
                         onClick={() => handleNotificationClick(notif)}
-                        className={`p-3.5 hover:bg-base/80 cursor-pointer transition-colors ${
+                        className={`p-3.5 hover:bg-blue-50/60 dark:hover:bg-blue-950/30 cursor-pointer transition-colors ${
                           !notif.isRead ? 'bg-primary-50/50 dark:bg-primary-950/20' : ''
                         }`}
                       >
@@ -298,7 +300,7 @@ const MainLayout = () => {
                               {notif.title}
                             </p>
                             <p className="text-xs text-muted mt-0.5 line-clamp-2 leading-relaxed">{notif.message}</p>
-                            <p className="text-[10px] text-muted opacity-60 mt-1 font-mono">
+                            <p className="text-[10px] text-muted mt-1 font-mono">
                               {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
@@ -354,12 +356,12 @@ const MainLayout = () => {
         {/* User Card when expanded */}
         <div className={`p-4 border-b border-border transition-opacity duration-200 ${sidebarExpanded ? 'opacity-100' : 'hidden'}`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
               {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </div>
             <div className="overflow-hidden">
               <h4 className="text-sm font-bold text-content truncate">{user?.name || 'ClassNova User'}</h4>
-              <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-900/40">
+              <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/40">
                 {user?.role} Portal
               </span>
             </div>
@@ -377,16 +379,16 @@ const MainLayout = () => {
                 key={link.name}
                 to={link.path}
                 title={!sidebarExpanded ? link.name : undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all group relative ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all group relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                   active
-                    ? 'bg-primary-100 text-primary-800 dark:bg-primary-900/40 dark:text-primary-300 font-semibold shadow-xs'
-                    : 'text-muted hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-content'
+                    ? 'bg-blue-600 text-white dark:bg-blue-600 dark:text-white font-semibold shadow-xs'
+                    : 'text-[#374151] dark:text-slate-400 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-300'
                 } ${!sidebarExpanded ? 'justify-center' : ''}`}
               >
                 <Icon
                   size={20}
                   className={`shrink-0 transition-colors ${
-                    active ? 'text-primary-600 dark:text-primary-400' : 'text-muted group-hover:text-content'
+                    active ? 'text-white' : 'text-[#4B5563] dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-300'
                   }`}
                 />
 
@@ -455,7 +457,7 @@ const MainLayout = () => {
           </div>
           <button
             onClick={() => setMobileDrawerOpen(false)}
-            className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-muted"
+            className="p-1.5 rounded-full hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400 text-muted transition-colors"
             aria-label="Close menu"
           >
             <X size={20} />
@@ -465,7 +467,7 @@ const MainLayout = () => {
         {/* User preview */}
         <div className="p-4 border-b border-border bg-base/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+            <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
               {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </div>
             <div className="overflow-hidden">
@@ -486,14 +488,19 @@ const MainLayout = () => {
                 key={link.name}
                 to={link.path}
                 onClick={() => setMobileDrawerOpen(false)}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-colors ${
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                   active
-                    ? 'bg-primary-100 text-primary-800 dark:bg-primary-900/40 dark:text-primary-300 font-semibold'
-                    : 'text-muted hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-content'
+                    ? 'bg-blue-600 text-white dark:bg-blue-600 dark:text-white font-semibold shadow-xs'
+                    : 'text-[#374151] dark:text-slate-400 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-300'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon size={19} className={active ? 'text-primary-600 dark:text-primary-400' : 'text-muted'} />
+                  <Icon
+                    size={19}
+                    className={`shrink-0 transition-colors ${
+                      active ? 'text-white' : 'text-[#4B5563] dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-300'
+                    }`}
+                  />
                   <span>{link.name}</span>
                 </div>
                 {link.badge > 0 && (

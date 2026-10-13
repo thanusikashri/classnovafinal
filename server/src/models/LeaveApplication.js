@@ -11,6 +11,10 @@ const leaveApplicationSchema = new mongoose.Schema({
     ref: 'Class',
     required: true
   },
+  teacher: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  },
   startDate: {
     type: Date,
     required: [true, 'Please provide a start date']
@@ -41,12 +45,18 @@ const leaveApplicationSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: 300
+  },
+  teacherComment: {
+    type: String,
+    trim: true,
+    maxlength: 300
   }
 }, {
   timestamps: true
 });
 
 leaveApplicationSchema.index({ classId: 1, student: 1, status: 1 });
+leaveApplicationSchema.index({ teacher: 1, status: 1 });
 leaveApplicationSchema.index({ student: 1, createdAt: -1 });
 
 module.exports = mongoose.model('LeaveApplication', leaveApplicationSchema);

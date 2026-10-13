@@ -8,7 +8,9 @@ const {
   startAttempt,
   submitAttempt,
   getQuizAnalytics,
-  getMyAttempts
+  getMyAttempts,
+  getAttemptById,
+  gradeAttempt
 } = require('../controllers/quiz.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
@@ -34,6 +36,11 @@ router
 
 router.get('/:id/attempts/me', authorize('student'), getMyAttempts);
 
-router.put('/:id/attempts/:attemptId', authorize('student'), submitAttempt);
+router
+  .route('/:id/attempts/:attemptId')
+  .get(getAttemptById)
+  .put(authorize('student'), submitAttempt);
+
+router.put('/:id/attempts/:attemptId/grade', authorize('teacher', 'admin'), gradeAttempt);
 
 module.exports = router;

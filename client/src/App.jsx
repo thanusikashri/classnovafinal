@@ -28,6 +28,7 @@ import AnnouncementsPage from './pages/announcement/AnnouncementsPage';
 import StudentDashboard from './pages/dashboard/StudentDashboard';
 import TeacherDashboard from './pages/dashboard/TeacherDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
+import TeacherAssignmentSubmissions from './pages/teacher/TeacherAssignmentSubmissions';
 
 // Admin specific pages
 import AdminUsers from './pages/admin/AdminUsers';
@@ -135,6 +136,14 @@ const App = () => {
                 element={
                   <ProtectedRoute roles={['teacher', 'admin', 'student']}>
                     <MaterialsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="teacher/assignment-submissions"
+                element={
+                  <ProtectedRoute roles={['teacher', 'admin']}>
+                    <TeacherAssignmentSubmissions />
                   </ProtectedRoute>
                 }
               />

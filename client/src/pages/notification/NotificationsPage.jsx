@@ -107,7 +107,7 @@ const NotificationsPage = () => {
                     {notif.title}
                   </h4>
                   <p className="text-xs text-muted mt-1 leading-relaxed">{notif.message}</p>
-                  <span className="text-[10px] text-muted opacity-70 mt-2 block font-mono">
+                  <span className="text-[10px] text-muted mt-2 block font-mono">
                     {new Date(notif.createdAt).toLocaleString()}
                   </span>
                 </div>

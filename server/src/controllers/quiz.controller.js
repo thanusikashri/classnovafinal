@@ -1,6 +1,7 @@
 const Quiz = require('../models/Quiz');
 const QuizAttempt = require('../models/QuizAttempt');
 const Class = require('../models/Class');
+const { evaluateDescriptiveAnswer } = require('../services/aiGenerator.service');
 
 // @desc    Get all quizzes for a class
 // @route   GET /api/classes/:classId/quizzes
@@ -52,6 +53,44 @@ exports.createQuiz = async (req, res, next) => {
 
     if (cls.teacher.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to create quizzes for this class' });
+    }
+
+    // Backend validation: enforce between 1 and 10 questions maximum
+    if (!req.body.questions || !Array.isArray(req.body.questions) || req.body.questions.length === 0) {
+      return res.status(400).json({ success: false, message: 'A quiz must contain at least 1 question' });
+    }
+
+    if (req.body.questions.length > 10) {
+      return res.status(400).json({ success: false, message: 'A quiz cannot contain more than 10 questions (maximum 10 allowed)' });
+    }
+
+    for (let i = 0; i < req.body.questions.length; i++) {
+      const q = req.body.questions[i];
+      if (!q.text || !q.text.trim()) {
+        return res.status(400).json({ success: false, message: `Question ${i + 1} text is required` });
+      }
+      const qType = q.type || 'multiple_choice';
+      if (qType === 'multiple_choice') {
+        if (!Array.isArray(q.options) || q.options.length < 2) {
+          return res.status(400).json({ success: false, message: `Question ${i + 1} must have at least 2 options` });
+        }
+        const optIdx = Number(q.correctOptionIndex);
+        if (isNaN(optIdx) || optIdx < 0 || optIdx >= q.options.length) {
+          return res.status(400).json({ success: false, message: `Question ${i + 1} has an invalid correct option index` });
+        }
+      } else if (qType === 'true_false') {
+        if (!Array.isArray(q.options) || q.options.length !== 2) {
+          q.options = ['True', 'False'];
+        }
+        const optIdx = Number(q.correctOptionIndex);
+        if (isNaN(optIdx) || optIdx < 0 || optIdx >= 2) {
+          return res.status(400).json({ success: false, message: `Question ${i + 1} must specify whether True (0) or False (1) is correct` });
+        }
+      } else if (qType === 'short_answer') {
+        if (!q.correctAnswer && !q.expectedAnswer) {
+          return res.status(400).json({ success: false, message: `Question ${i + 1} must have a reference/expected answer` });
+        }
+      }
     }
 
     req.body.classId = classId;
@@ -125,6 +164,28 @@ exports.updateQuiz = async (req, res, next) => {
     const attemptsCount = await QuizAttempt.countDocuments({ quizId: quiz._id });
     if (attemptsCount > 0 && req.body.questions) {
       return res.status(400).json({ success: false, message: 'Cannot edit questions after students have started the quiz' });
+    }
+
+    if (req.body.questions) {
+      if (!Array.isArray(req.body.questions) || req.body.questions.length === 0) {
+        return res.status(400).json({ success: false, message: 'A quiz must contain at least 1 question' });
+      }
+      if (req.body.questions.length > 10) {
+        return res.status(400).json({ success: false, message: 'A quiz cannot contain more than 10 questions (maximum 10 allowed)' });
+      }
+      for (let i = 0; i < req.body.questions.length; i++) {
+        const q = req.body.questions[i];
+        if (!q.text || !q.text.trim()) {
+          return res.status(400).json({ success: false, message: `Question ${i + 1} text is required` });
+        }
+        if (!Array.isArray(q.options) || q.options.length < 2) {
+          return res.status(400).json({ success: false, message: `Question ${i + 1} must have at least 2 options` });
+        }
+        const optIdx = Number(q.correctOptionIndex);
+        if (isNaN(optIdx) || optIdx < 0 || optIdx >= q.options.length) {
+          return res.status(400).json({ success: false, message: `Question ${i + 1} has an invalid correct option index` });
+        }
+      }
     }
 
     delete req.body.classId;
@@ -239,7 +300,7 @@ exports.startAttempt = async (req, res, next) => {
 exports.submitAttempt = async (req, res, next) => {
   try {
     const { id: quizId, attemptId } = req.params;
-    const { answers } = req.body; // array of { questionId, selectedOptionIndex }
+    const { answers } = req.body; // array of { questionId, selectedOptionIndex, textAnswer }
     
     const attempt = await QuizAttempt.findOne({ _id: attemptId, quizId, student: req.user.id });
     if (!attempt) {
@@ -251,47 +312,168 @@ exports.submitAttempt = async (req, res, next) => {
     }
 
     const quiz = await Quiz.findById(quizId);
+    if (!quiz) {
+      return res.status(404).json({ success: false, message: 'Quiz not found' });
+    }
     
     // Check if time expired
     const elapsedMinutes = (Date.now() - new Date(attempt.startTime).getTime()) / 60000;
     const isExpired = elapsedMinutes > quiz.durationMinutes;
 
-    // Calculate score safely using server-side correctOptionIndex
     let score = 0;
+    let maxScore = 0;
+    let correctCount = 0;
+    let incorrectCount = 0;
+    let unansweredCount = 0;
+    let hasManualReview = false;
+
     const safeAnswers = [];
+    const evaluation = [];
 
-    // Map quiz questions for O(1) lookup
-    const qMap = {};
-    quiz.questions.forEach(q => qMap[q._id.toString()] = q);
-
+    const ansMap = {};
     if (Array.isArray(answers)) {
-      answers.forEach(ans => {
-        const q = qMap[ans.questionId];
-        if (q) {
-          safeAnswers.push({ questionId: ans.questionId, selectedOptionIndex: ans.selectedOptionIndex });
-          if (ans.selectedOptionIndex === q.correctOptionIndex) {
-            score += q.marks;
-          }
+      answers.forEach(a => {
+        if (a && a.questionId) {
+          ansMap[a.questionId.toString()] = a;
         }
       });
     }
 
-    attempt.answers = safeAnswers;
-    attempt.score = score;
-    attempt.status = 'Submitted';
-    
-    if (isExpired) {
-      attempt.submittedAt = new Date(new Date(attempt.startTime).getTime() + quiz.durationMinutes * 60000);
-    } else {
-      attempt.submittedAt = Date.now();
+    for (let i = 0; i < quiz.questions.length; i++) {
+      const q = quiz.questions[i];
+      const qId = q._id.toString();
+      const studentAns = ansMap[qId] || ansMap[i.toString()] || null;
+      const questionMarks = q.marks || 1;
+      maxScore += questionMarks;
+
+      const qType = q.type || 'multiple_choice';
+
+      if (qType === 'multiple_choice' || qType === 'true_false') {
+        const selectedOptIdx = studentAns && studentAns.selectedOptionIndex !== undefined && studentAns.selectedOptionIndex !== null && studentAns.selectedOptionIndex !== -1
+          ? Number(studentAns.selectedOptionIndex)
+          : null;
+
+        const isAnswered = selectedOptIdx !== null && !isNaN(selectedOptIdx);
+        const selectedOptText = isAnswered && q.options && q.options[selectedOptIdx] ? q.options[selectedOptIdx] : '';
+        const correctOptText = q.options && q.options[q.correctOptionIndex] ? q.options[q.correctOptionIndex] : '';
+
+        if (!isAnswered) {
+          unansweredCount++;
+          safeAnswers.push({ questionId: qId, selectedOptionIndex: -1 });
+          evaluation.push({
+            questionId: qId,
+            questionText: q.text,
+            questionType: qType,
+            studentAnswer: null,
+            selectedOptionText: 'No answer submitted',
+            correctOptionIndex: q.correctOptionIndex,
+            correctAnswerText: correctOptText,
+            isCorrect: false,
+            marksAwarded: 0,
+            maxMarks: questionMarks,
+            feedback: 'Question was left unanswered.',
+            needsManualReview: false
+          });
+        } else {
+          const isCorrect = selectedOptIdx === q.correctOptionIndex;
+          const marksAwarded = isCorrect ? questionMarks : 0;
+          if (isCorrect) {
+            correctCount++;
+            score += marksAwarded;
+          } else {
+            incorrectCount++;
+          }
+
+          safeAnswers.push({ questionId: qId, selectedOptionIndex: selectedOptIdx });
+          evaluation.push({
+            questionId: qId,
+            questionText: q.text,
+            questionType: qType,
+            studentAnswer: selectedOptIdx,
+            selectedOptionText: selectedOptText,
+            correctOptionIndex: q.correctOptionIndex,
+            correctAnswerText: correctOptText,
+            isCorrect,
+            marksAwarded,
+            maxMarks: questionMarks,
+            feedback: isCorrect ? 'Correct! Full marks awarded.' : `Incorrect. Correct answer: ${correctOptText}`,
+            needsManualReview: false
+          });
+        }
+      } else if (qType === 'short_answer') {
+        const textAnswer = studentAns && studentAns.textAnswer ? String(studentAns.textAnswer).trim() : '';
+        const isAnswered = textAnswer.length > 0;
+        const expectedAnswer = q.correctAnswer || (q.options && q.options[0]) || '';
+
+        if (!isAnswered) {
+          unansweredCount++;
+          safeAnswers.push({ questionId: qId, textAnswer: '' });
+          evaluation.push({
+            questionId: qId,
+            questionText: q.text,
+            questionType: qType,
+            studentAnswer: '',
+            selectedOptionText: 'No response submitted',
+            correctAnswerText: expectedAnswer,
+            isCorrect: false,
+            marksAwarded: 0,
+            maxMarks: questionMarks,
+            feedback: 'Question was left unanswered.',
+            needsManualReview: false
+          });
+        } else {
+          const evalResult = await evaluateDescriptiveAnswer(textAnswer, expectedAnswer, q.rubric || '', questionMarks);
+          score += evalResult.marksAwarded;
+          if (evalResult.isCorrect) {
+            correctCount++;
+          } else {
+            incorrectCount++;
+          }
+          if (evalResult.needsManualReview) {
+            hasManualReview = true;
+          }
+
+          safeAnswers.push({ questionId: qId, textAnswer });
+          evaluation.push({
+            questionId: qId,
+            questionText: q.text,
+            questionType: qType,
+            studentAnswer: textAnswer,
+            selectedOptionText: textAnswer,
+            correctAnswerText: expectedAnswer,
+            isCorrect: evalResult.isCorrect,
+            marksAwarded: evalResult.marksAwarded,
+            maxMarks: questionMarks,
+            feedback: evalResult.feedback,
+            needsManualReview: evalResult.needsManualReview
+          });
+        }
+      }
     }
+
+    const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+    const evaluationStatus = hasManualReview ? 'Pending Review' : 'Evaluated';
+
+    attempt.answers = safeAnswers;
+    attempt.evaluation = evaluation;
+    attempt.score = score;
+    attempt.maxScore = maxScore;
+    attempt.percentage = percentage;
+    attempt.correctCount = correctCount;
+    attempt.incorrectCount = incorrectCount;
+    attempt.unansweredCount = unansweredCount;
+    attempt.evaluationStatus = evaluationStatus;
+    attempt.status = 'Submitted';
+    attempt.submittedAt = isExpired
+      ? new Date(new Date(attempt.startTime).getTime() + quiz.durationMinutes * 60000)
+      : new Date();
 
     await attempt.save();
 
     res.status(200).json({
       success: true,
       data: attempt,
-      message: isExpired ? 'Time expired. Submitted automatically.' : 'Submitted successfully'
+      message: isExpired ? 'Time expired. Submitted automatically.' : 'Submitted and evaluated successfully'
     });
   } catch (err) {
     next(err);
@@ -314,12 +496,125 @@ exports.getQuizAnalytics = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    const attempts = await QuizAttempt.find({ quizId }).populate('student', 'name email');
+    const attempts = await QuizAttempt.find({ quizId })
+      .populate('student', 'name email studentId')
+      .sort('-submittedAt -createdAt');
 
     res.status(200).json({
       success: true,
       count: attempts.length,
       data: attempts
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Get single attempt details
+// @route   GET /api/classes/:classId/quizzes/:id/attempts/:attemptId
+// @access  Private
+exports.getAttemptById = async (req, res, next) => {
+  try {
+    const { id: quizId, attemptId } = req.params;
+    const attempt = await QuizAttempt.findById(attemptId).populate('student', 'name email studentId');
+
+    if (!attempt || attempt.quizId.toString() !== quizId) {
+      return res.status(404).json({ success: false, message: 'Attempt not found' });
+    }
+
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz) {
+      return res.status(404).json({ success: false, message: 'Quiz not found' });
+    }
+
+    const isStudentOwner = attempt.student && (attempt.student._id.toString() === req.user.id || attempt.student.toString() === req.user.id);
+    const isTeacher = quiz.teacher.toString() === req.user.id || req.user.role === 'admin';
+
+    if (!isStudentOwner && !isTeacher) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view this attempt' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: attempt
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Teacher manually grades or adjusts marks
+// @route   PUT /api/classes/:classId/quizzes/:id/attempts/:attemptId/grade
+// @access  Private (Teacher/Admin)
+exports.gradeAttempt = async (req, res, next) => {
+  try {
+    const { id: quizId, attemptId } = req.params;
+    const { evaluations, teacherNotes } = req.body;
+
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz) {
+      return res.status(404).json({ success: false, message: 'Quiz not found' });
+    }
+
+    if (quiz.teacher.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to grade this quiz' });
+    }
+
+    const attempt = await QuizAttempt.findById(attemptId);
+    if (!attempt || attempt.quizId.toString() !== quizId) {
+      return res.status(404).json({ success: false, message: 'Attempt not found' });
+    }
+
+    if (Array.isArray(evaluations)) {
+      evaluations.forEach(ev => {
+        const item = attempt.evaluation.find(e => e.questionId === ev.questionId);
+        if (item) {
+          if (ev.marksAwarded !== undefined) {
+            item.marksAwarded = Math.min(item.maxMarks, Math.max(0, Number(ev.marksAwarded)));
+            item.isCorrect = item.marksAwarded >= Math.ceil(item.maxMarks * 0.5);
+          }
+          if (ev.feedback !== undefined) {
+            item.feedback = ev.feedback;
+          }
+          item.needsManualReview = false;
+        }
+      });
+    }
+
+    // Recalculate score and percentage
+    let newScore = 0;
+    let newCorrect = 0;
+    let newIncorrect = 0;
+    let hasPending = false;
+
+    attempt.evaluation.forEach(e => {
+      newScore += e.marksAwarded;
+      if (e.isCorrect) newCorrect++;
+      else if (e.marksAwarded === 0 && e.studentAnswer === null) {
+        // Unanswered
+      } else {
+        newIncorrect++;
+      }
+      if (e.needsManualReview) hasPending = true;
+    });
+
+    attempt.score = newScore;
+    attempt.percentage = attempt.maxScore > 0 ? Math.round((newScore / attempt.maxScore) * 100) : 0;
+    attempt.correctCount = newCorrect;
+    attempt.incorrectCount = newIncorrect;
+    attempt.evaluationStatus = hasPending ? 'Pending Review' : 'Evaluated';
+    attempt.manualGrading = {
+      gradedBy: req.user.id,
+      gradedAt: new Date(),
+      teacherNotes: teacherNotes || ''
+    };
+
+    await attempt.save();
+
+    res.status(200).json({
+      success: true,
+      data: attempt,
+      message: 'Grading updated successfully'
     });
   } catch (err) {
     next(err);

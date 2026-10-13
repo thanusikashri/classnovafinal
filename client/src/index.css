@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Pastel Accent Colors */
   --color-primary-50: #f5f3ff;
@@ -28,77 +30,326 @@
   --color-pastel-peach: #ffedd5;
 
   /* Semantic Variables mapped to CSS vars below */
-  --color-base: var(--bg-base);
-  --color-surface: var(--bg-surface);
-  --color-border: var(--border-color);
-  --color-content: var(--text-base);
-  --color-muted: var(--text-muted);
+  --color-base: var(--app-bg-page);
+  --color-surface: var(--app-card-bg);
+  --color-border: var(--app-border-card);
+  --color-divider: var(--app-divider);
+  --color-content: var(--app-text-title);
+  --color-body: var(--app-text-body);
+  --color-muted: var(--app-text-muted);
+  --color-secondary-text: var(--app-text-secondary);
 }
 
 @layer base {
   :root {
-    --bg-base: #f8fafc; /* slate-50 */
+    --app-bg-page: #f8fafc; /* page background: #F8FAFC */
+    --app-card-bg: #ffffff; /* cards and panels: #FFFFFF */
+    --app-text-title: #111827; /* main headings and titles: #111827 */
+    --app-text-body: #1f2937; /* body text: #1F2937 */
+    --app-text-secondary: #374151; /* secondary text, labels, metadata: #374151 */
+    --app-text-muted: #4b5563; /* muted text: #4B5563 */
+    --app-border-card: #d1d5db; /* card borders: #D1D5DB */
+    --app-divider: #e5e7eb; /* dividers: #E5E7EB */
+    --app-link: #1d4ed8; /* links: #1D4ED8 */
+    --app-input-text: #111827; /* input text: #111827 */
+    --app-input-placeholder: #6b7280; /* input placeholders: #6B7280 */
+
+    /* Legacy mapping support */
+    --bg-base: #f8fafc;
     --bg-surface: #ffffff;
-    --text-base: #1e293b; /* slate-800 */
-    --text-muted: #64748b; /* slate-500 */
-    --border-color: #e2e8f0; /* slate-200 */
+    --border-color: #d1d5db;
   }
 
   .dark {
-    --bg-base: #0f172a; /* slate-900 */
-    --bg-surface: #1e293b; /* slate-800 */
-    --text-base: #f1f5f9; /* slate-100 */
-    --text-muted: #94a3b8; /* slate-400 */
-    --border-color: #334155; /* slate-700 */
+    --app-bg-page: #0f172a; /* slate-900 */
+    --app-card-bg: #1e293b; /* slate-800 */
+    --app-text-title: #f8fafc; /* slate-50 */
+    --app-text-body: #e2e8f0; /* slate-200 */
+    --app-text-secondary: #cbd5e1; /* slate-300 */
+    --app-text-muted: #94a3b8; /* slate-400 */
+    --app-border-card: #334155; /* slate-700 */
+    --app-divider: #334155;
+    --app-link: #60a5fa;
+    --app-input-text: #f8fafc;
+    --app-input-placeholder: #64748b;
+
+    /* Legacy mapping support */
+    --bg-base: #0f172a;
+    --bg-surface: #1e293b;
+    --border-color: #334155;
   }
 
   body {
-    background-color: var(--bg-base);
-    color: var(--text-base);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    background-color: var(--app-bg-page);
+    color: var(--app-text-body);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--app-text-title);
+  }
+
+  p {
+    color: inherit;
+  }
+
+  input, select, textarea {
+    color: var(--app-input-text);
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: var(--app-input-placeholder);
   }
 }
 
 @layer components {
-  .card-surface {
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: 1rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    transition: all 0.3s ease;
-  }
-  
-  .dark .card-surface {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  /* High contrast text utilities in both light and dark mode */
+  .text-content {
+    color: var(--app-text-title) !important;
   }
 
+  .text-body {
+    color: var(--app-text-body) !important;
+  }
+
+  .text-muted {
+    color: var(--app-text-muted) !important;
+  }
+
+  .text-secondary-text {
+    color: var(--app-text-secondary) !important;
+  }
+
+  /* Card Surface */
+  .card-surface {
+    background-color: var(--app-card-bg);
+    border: 1px solid var(--app-border-card);
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px 0 rgba(17, 24, 39, 0.05), 0 1px 2px -1px rgba(17, 24, 39, 0.03);
+    transition: all 0.2s ease;
+  }
+  
+  .card-surface:hover {
+    border-color: #9ca3af;
+    box-shadow: 0 4px 6px -1px rgba(17, 24, 39, 0.08), 0 2px 4px -2px rgba(17, 24, 39, 0.04);
+  }
+
+  .dark .card-surface {
+    background-color: var(--app-card-bg);
+    border-color: var(--app-border-card);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
+  }
+
+  .dark .card-surface:hover {
+    border-color: #475569;
+    box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.35);
+  }
+
+  /* 1. Course Code Badges: Clean Light-Blue Theme (#DBEAFE bg, #1D4ED8 text, #93C5FD border) */
+  .badge-course-code {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    border: 1px solid #93c5fd;
+    border-radius: 9999px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.125rem 0.625rem;
+    font-size: 0.75rem; /* 12px */
+    line-height: 1rem;
+    letter-spacing: 0.025em;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+
+  .dark .badge-course-code {
+    background-color: rgba(30, 58, 138, 0.45);
+    color: #93c5fd;
+    border-color: #1e40af;
+  }
+
+  /* 2. Status Badges */
+  .badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem; /* 11px */
+    font-weight: 600;
+    line-height: 1rem;
+    white-space: nowrap;
+    border-width: 1px;
+    border-style: solid;
+    transition: all 0.2s ease;
+  }
+
+  /* Available: Clean Green (#DCFCE7 bg, #166534 text, #86EFAC border) */
+  .badge-status-available,
+  .badge-status-approved,
+  .badge-status-present,
+  .badge-status-evaluated {
+    background-color: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+  }
+
+  .dark .badge-status-available,
+  .dark .badge-status-approved,
+  .dark .badge-status-present,
+  .dark .badge-status-evaluated {
+    background-color: rgba(6, 78, 59, 0.45);
+    color: #86efac;
+    border-color: #065f46;
+  }
+
+  /* Pending / In Progress: Yellow/Amber (#FEF9C3 bg, #854D0E text, #FDE047 border) */
+  .badge-status-pending,
+  .badge-status-in-progress,
+  .badge-status-review {
+    background-color: #fef9c3;
+    color: #854d0e;
+    border-color: #fde047;
+  }
+
+  .dark .badge-status-pending,
+  .dark .badge-status-in-progress,
+  .dark .badge-status-review {
+    background-color: rgba(113, 63, 18, 0.4);
+    color: #fde047;
+    border-color: #854d0e;
+  }
+
+  /* Submitted / Turned In: Indigo/Blue (#E0E7FF bg, #3730A3 text, #A5B4FC border) */
+  .badge-status-submitted,
+  .badge-status-turned-in {
+    background-color: #e0e7ff;
+    color: #3730a3;
+    border-color: #a5b4fc;
+  }
+
+  .dark .badge-status-submitted,
+  .dark .badge-status-turned-in {
+    background-color: rgba(49, 46, 129, 0.45);
+    color: #a5b4fc;
+    border-color: #3730a3;
+  }
+
+  /* Closed / Rejected / Overdue / Late: Red (#FEE2E2 bg, #991B1B text, #FCA5A5 border) */
+  .badge-status-closed,
+  .badge-status-rejected,
+  .badge-status-overdue,
+  .badge-status-late,
+  .badge-status-absent {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-color: #fca5a5;
+  }
+
+  .dark .badge-status-closed,
+  .dark .badge-status-rejected,
+  .dark .badge-status-overdue,
+  .dark .badge-status-late,
+  .dark .badge-status-absent {
+    background-color: rgba(127, 29, 29, 0.45);
+    color: #fca5a5;
+    border-color: #991b1b;
+  }
+
+  /* Draft / Unavailable: Slate (#F1F5F9 bg, #475569 text, #CBD5E1 border) */
+  .badge-status-draft,
+  .badge-status-unavailable,
+  .badge-status-inactive {
+    background-color: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+  }
+
+  .dark .badge-status-draft,
+  .dark .badge-status-unavailable,
+  .dark .badge-status-inactive {
+    background-color: #334155;
+    color: #cbd5e1;
+    border-color: #475569;
+  }
+
+  /* Primary Button (Purple) */
   .btn-primary {
-    @apply inline-flex justify-center items-center px-6 py-2.5 rounded-full font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex justify-center items-center px-5 py-2.5 rounded-xl font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer;
   }
 
   .dark .btn-primary {
     @apply focus:ring-offset-slate-900;
   }
 
+  /* Secondary Button */
   .btn-secondary {
-    @apply inline-flex justify-center items-center px-6 py-2.5 rounded-full font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all;
-    background-color: var(--bg-base);
-    color: var(--text-base);
-    border: 1px solid var(--border-color);
+    @apply inline-flex justify-center items-center px-4 py-2 rounded-xl font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer;
+    background-color: var(--app-card-bg);
+    color: var(--app-text-secondary);
+    border: 1px solid var(--app-border-card);
+  }
+
+  .btn-secondary:hover {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border-color: #93c5fd;
   }
 
   .dark .btn-secondary {
-    @apply hover:bg-slate-700 focus:ring-offset-slate-900;
+    background-color: #1e293b;
+    color: #cbd5e1;
+    border-color: #334155;
   }
 
+  .dark .btn-secondary:hover {
+    background-color: rgba(30, 58, 138, 0.35);
+    color: #93c5fd;
+    border-color: #1e40af;
+  }
+
+  /* Details Action Link */
+  .link-details {
+    @apply inline-flex items-center gap-1 font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400;
+    color: #1d4ed8;
+    background-color: transparent;
+  }
+
+  .link-details:hover {
+    color: #1e40af;
+    background-color: #eff6ff;
+  }
+
+  .dark .link-details {
+    color: #60a5fa;
+  }
+
+  .dark .link-details:hover {
+    color: #93c5fd;
+    background-color: rgba(30, 58, 138, 0.35);
+  }
+
+  /* Form Input */
   .input-field {
-    @apply block w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all;
-    background-color: var(--bg-base);
-    color: var(--text-base);
-    border: 1px solid var(--border-color);
+    @apply block w-full px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-sm;
+    background-color: var(--app-card-bg);
+    color: var(--app-input-text);
+    border: 1px solid var(--app-border-card);
+  }
+
+  .input-field::placeholder {
+    color: var(--app-input-placeholder);
+  }
+
+  .input-field:focus {
+    border-color: var(--color-primary-500);
   }
   
   .dark .input-field {
-    @apply focus:border-transparent;
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #f8fafc;
   }
 }

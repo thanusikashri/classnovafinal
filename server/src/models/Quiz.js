@@ -5,14 +5,27 @@ const QuestionSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add question text']
   },
+  type: {
+    type: String,
+    enum: ['multiple_choice', 'true_false', 'short_answer'],
+    default: 'multiple_choice'
+  },
   options: {
     type: [String],
-    validate: [v => v.length >= 2, 'A question must have at least 2 options']
+    default: []
   },
   correctOptionIndex: {
     type: Number,
-    required: true,
     min: 0
+  },
+  correctAnswer: {
+    type: String
+  },
+  rubric: {
+    type: String
+  },
+  explanation: {
+    type: String
   },
   marks: {
     type: Number,
@@ -53,7 +66,17 @@ const QuizSchema = new mongoose.Schema({
   endTime: {
     type: Date
   },
-  questions: [QuestionSchema],
+  questions: {
+    type: [QuestionSchema],
+    validate: [
+      {
+        validator: function(v) {
+          return !v || (v.length >= 1 && v.length <= 10);
+        },
+        message: 'A quiz cannot contain more than 10 questions (maximum 10 allowed)'
+      }
+    ]
+  },
   isPublished: {
     type: Boolean,
     default: false

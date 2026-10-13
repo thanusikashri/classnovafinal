@@ -13,8 +13,11 @@ exports.getClasses = async (req, res, next) => {
     } else if (req.user.role === 'teacher') {
       query = Class.find({ teacher: req.user.id }).populate('teacher', 'name email');
     } else {
-      // student: only enrolled classes
-      query = Class.find({ students: req.user.id }).populate('teacher', 'name email');
+      if (req.query.enrolledOnly === 'true') {
+        query = Class.find({ students: req.user.id }).populate('teacher', 'name email');
+      } else {
+        query = Class.find().populate('teacher', 'name email');
+      }
     }
 
     const classes = await query;
@@ -37,12 +40,13 @@ exports.getClass = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Class not found' });
     }
 
-    // Check permissions
-    if (req.user.role !== 'admin' && classData.teacher._id.toString() !== req.user.id && !classData.students.some(s => s._id.toString() === req.user.id)) {
-      return res.status(403).json({ success: false, message: 'Not authorized to access this class' });
-    }
+    const isEnrolled = classData.students.some(s => s._id.toString() === req.user.id);
+    const isTeacher = classData.teacher._id.toString() === req.user.id || req.user.role === 'admin';
 
-    res.status(200).json({ success: true, data: classData });
+    const responseData = classData.toObject();
+    responseData.isEnrolled = isTeacher || isEnrolled;
+
+    res.status(200).json({ success: true, data: responseData });
   } catch (err) {
     next(err);
   }
@@ -108,6 +112,36 @@ exports.enrollStudent = async (req, res, next) => {
     );
 
     res.status(200).json({ success: true, data: classData });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Enroll student via class ID
+// @route   POST /api/classes/:id/enroll
+// @access  Private (Student)
+exports.enrollStudentById = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ success: false, message: 'Only students can enroll' });
+    }
+
+    const existingClass = await Class.findById(req.params.id);
+    if (!existingClass) {
+      return res.status(404).json({ success: false, message: 'Class not found' });
+    }
+
+    if (existingClass.students.includes(req.user.id)) {
+      return res.status(400).json({ success: false, message: 'Already enrolled in this class' });
+    }
+
+    const classData = await Class.findByIdAndUpdate(
+      req.params.id,
+      { $addToSet: { students: req.user.id } },
+      { new: true }
+    );
+
+    res.status(200).json({ success: true, data: classData, message: `Enrolled in ${existingClass.name} successfully` });
   } catch (err) {
     next(err);
   }
